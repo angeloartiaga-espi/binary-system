@@ -39,6 +39,7 @@ model User {
   privacyNoticeVersion String?
 
   isActive Boolean @default(true) // soft-delete flag
+  emailVerified Boolean @default(false)
 
   roles UserRole[]
 

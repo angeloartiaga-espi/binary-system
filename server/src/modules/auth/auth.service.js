@@ -1,8 +1,8 @@
 import prisma from '../../config/db.js';
 import { hashPassword, comparePassword } from '../../utils/password.js';
 import { generateReferralCode } from '../../utils/referralCode.js';
-import { signToken } from '../../utils/jwt.js';
-import { sendWelcomeEmail } from '../../utils/email.js';
+import { signToken, verifyToken } from '../../utils/jwt.js';
+import {  sendVerificationEmail } from '../../utils/email.js';
 
 const PRIVACY_NOTICE_VERSION = 'v1.0-2026';
 
@@ -61,8 +61,12 @@ async function registerUser(
         return created;
     });
 
-    sendWelcomeEmail(user.email, user.firstName).catch((err) =>
-        console.error('Welcome email failed:', err.message)
+    // Verification link expires in 24 hours — shorter-lived than a login token.
+    const verifyToken = signToken({ id: user.id, purpose: 'verify-email' }, '1d');
+    const verifyUrl = `${process.env.CLIENT_URL}/verify-email/${verifyToken}`;
+
+    sendVerificationEmail(user.email, user.firstName, verifyUrl).catch((err) =>
+        console.error('Failed to send verification email:', err.message)
     );
 
     const { password: _pw, ...safeUser } = user;
@@ -97,4 +101,29 @@ async function loginUser({ email, password }) {
     };
 }
 
-export { registerUser, loginUser };
+async function verifyEmail(token) {
+    let decoded;
+    try {
+        decoded = verifyToken(token);
+    } catch {
+        const err = new Error('This verification link is invalid or has expired');
+        err.status = 400;
+        throw err;
+    }
+
+    if (decoded.purpose !== 'verify-email') {
+        const err = new Error('Invalid verification link');
+        err.status = 400;
+        throw err;
+    }
+
+    const user = await prisma.user.update({
+        where: { id: decoded.id },
+        data: { emailVerified: true },
+    });
+
+    const { password: _pw, ...safeUser } = user;
+    return safeUser;
+}
+
+export { registerUser, loginUser, verifyEmail };

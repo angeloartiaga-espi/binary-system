@@ -28,4 +28,6 @@ router.get(
     controller.me
 );
 
+router.get('/verify-email/:token', controller.verifyEmail);
+
 export default router;

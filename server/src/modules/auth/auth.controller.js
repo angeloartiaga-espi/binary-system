@@ -1,5 +1,5 @@
 import { validationResult } from 'express-validator';
-import { registerUser, loginUser } from './auth.service.js';
+import { registerUser, loginUser, verifyEmail as verifyEmailService } from './auth.service.js';
 
 async function register(req, res, next) {
     try {
@@ -16,7 +16,7 @@ async function register(req, res, next) {
         // req.file is set by the `upload.single('idImage')` middleware
         const idImageUrl = req.file ? req.file.path : null;
 
-        const user = await authService.registerUser(
+        const user = await registerUser(
             req.body,
             idImageUrl
         );
@@ -43,7 +43,7 @@ async function login(req, res, next) {
             });
         }
 
-        const { token, user } = await authService.loginUser(req.body);
+        const { token, user } = await loginUser(req.body);
 
         res.json({
             success: true,
@@ -66,8 +66,19 @@ async function me(req, res) {
     });
 }
 
+async function verifyEmail(req, res, next) {
+    try {
+        const user = await verifyEmailService(req.params.token);
+        res.json({ success: true, message: 'Email verified', data: user });
+    } catch (err) {
+        next(err);
+    }
+}
+
+
 export default {
     register,
     login,
     me,
+    verifyEmail
 };

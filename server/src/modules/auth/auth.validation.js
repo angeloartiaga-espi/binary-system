@@ -19,6 +19,8 @@ const registerValidation = [
         .optional({ checkFalsy: true })
         .isString(),
 
+    body('referrerCode').optional({ checkFalsy: true }).isString(),
+
     body('password')
         .isLength({ min: 8 })
         .withMessage('Password must be at least 8 characters'),
