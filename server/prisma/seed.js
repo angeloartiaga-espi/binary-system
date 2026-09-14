@@ -1,4 +1,5 @@
 import "dotenv/config";
+import bcrypt from "bcrypt";
 import { PrismaClient } from "../generated/prisma/client.ts";
 import { PrismaPg } from "@prisma/adapter-pg";
 
@@ -9,6 +10,10 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
+    // ==========================================
+    // 1. CREATE PERMISSIONS
+    // ==========================================
+
     const permissionNames = [
         "view_dashboard",
         "manage_users",
@@ -21,9 +26,15 @@ async function main() {
         permissions[name] = await prisma.permission.upsert({
             where: { name },
             update: {},
-            create: { name },
+            create: {
+                name,
+            },
         });
     }
+
+    // ==========================================
+    // 2. CREATE ROLES
+    // ==========================================
 
     const clientRole = await prisma.role.upsert({
         where: { name: "client" },
@@ -43,6 +54,10 @@ async function main() {
         },
     });
 
+    // ==========================================
+    // 3. CLIENT ROLE PERMISSION
+    // ==========================================
+
     await prisma.rolePermission.upsert({
         where: {
             roleId_permissionId: {
@@ -56,6 +71,10 @@ async function main() {
             permissionId: permissions.view_dashboard.id,
         },
     });
+
+    // ==========================================
+    // 4. ADMIN ROLE PERMISSIONS
+    // ==========================================
 
     for (const name of permissionNames) {
         await prisma.rolePermission.upsert({
@@ -73,9 +92,75 @@ async function main() {
         });
     }
 
+    // ==========================================
+    // 5. CREATE ADMIN USER
+    // ==========================================
+
+    const adminPassword = process.env.ADMIN_PASSWORD;
+
+    if (!adminPassword) {
+        throw new Error(
+            "ADMIN_PASSWORD is not defined in your .env file."
+        );
+    }
+
+    const hashedPassword = await bcrypt.hash(adminPassword, 12);
+
+    const adminUser = await prisma.user.upsert({
+        where: {
+            email: "admin@espi.com.ph",
+        },
+        update: {
+            firstName: "ESPI",
+            lastName: "Administrator",
+            password: hashedPassword,
+            isActive: true,
+            emailVerified: true,
+            membershipStatus: "PLATINUM",
+        },
+        create: {
+            firstName: "ESPI",
+            lastName: "Administrator",
+            email: "admin@espi.com.ph",
+            password: hashedPassword,
+            referralCode: "ESPIADMIN",
+            membershipStatus: "PLATINUM",
+            privacyConsent: true,
+            consentDate: new Date(),
+            privacyNoticeVersion: "v1.0-2026",
+            isActive: true,
+            emailVerified: true,
+            roles: {
+                create: {
+                    roleId: adminRole.id,
+                },
+            },
+        },
+    });
+
+    // ==========================================
+    // 6. ENSURE ADMIN ROLE IS ATTACHED
+    // ==========================================
+
+    await prisma.userRole.upsert({
+        where: {
+            userId_roleId: {
+                userId: adminUser.id,
+                roleId: adminRole.id,
+            },
+        },
+        update: {},
+        create: {
+            userId: adminUser.id,
+            roleId: adminRole.id,
+        },
+    });
+
     console.log(
         'Seed complete: "client" and "admin" roles + permissions are ready.'
     );
+
+    console.log(`Admin user created/updated: ${adminUser.email}`);
 }
 
 main()

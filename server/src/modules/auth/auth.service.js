@@ -74,9 +74,43 @@ async function registerUser(
     return safeUser;
 }
 
+// async function loginUser({ email, password }) {
+//     const user = await prisma.user.findUnique({
+//         where: { email },
+//     });
+
+//     if (!user || !user.isActive) {
+//         const err = new Error('Invalid email or password');
+//         err.status = 401;
+//         throw err;
+//     }
+
+//     if (!(await comparePassword(password, user.password))) {
+//         const err = new Error('Invalid email or password');
+//         err.status = 401;
+//         throw err;
+//     }
+
+//     const token = signToken({ id: user.id });
+
+//     const { password: _pw, ...safeUser } = user;
+
+//     return {
+//         token,
+//         user: safeUser,
+//     };
+// }
+
 async function loginUser({ email, password }) {
     const user = await prisma.user.findUnique({
         where: { email },
+        include: {
+            roles: {
+                include: {
+                    role: true,
+                },
+            },
+        },
     });
 
     if (!user || !user.isActive) {

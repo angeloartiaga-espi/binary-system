@@ -1,11 +1,15 @@
 import { validationResult } from 'express-validator';
-import { listUsers, getUserById } from './user.service.js';
+import {    listUsers,
+    getUserById,
+    createUser,
+    updateUser,
+    deleteUser, } from './user.service.js';
 
 async function list(req, res, next) {
     try {
         const { page, limit, search } = req.query;
 
-        const result = await userService.listUsers({
+        const result = await listUsers({
             page: Number(page) || 1,
             limit: Number(limit) || 10,
             search,
@@ -22,7 +26,7 @@ async function list(req, res, next) {
 
 async function getOne(req, res, next) {
     try {
-        const user = await userService.getUserById(req.params.id);
+        const user = await getUserById(req.params.id);
 
         res.json({
             success: true,
@@ -45,7 +49,7 @@ async function create(req, res, next) {
             });
         }
 
-        const user = await userService.createUser(req.body);
+        const user = await createUser(req.body);
 
         res.status(201).json({
             success: true,
@@ -68,7 +72,7 @@ async function update(req, res, next) {
             });
         }
 
-        const user = await userService.updateUser(
+        const user = await updateUser(
             req.params.id,
             req.body
         );
@@ -84,7 +88,7 @@ async function update(req, res, next) {
 
 async function remove(req, res, next) {
     try {
-        await userService.deleteUser(req.params.id);
+        await deleteUser(req.params.id);
 
         res.json({
             success: true,
