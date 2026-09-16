@@ -1,8 +1,1 @@
-import { Navigate, Outlet } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-
-export default function RequireAdmin() {
-    const user = useSelector((state) => state.auth.user);
-    const isAdmin = user?.roles?.some((ur) => ur.role.name === 'admin');
-    return isAdmin ? <Outlet /> : <Navigate to="/dashboard" replace />;
-}
+import { Navigate, Outlet } from 'react-router-dom'; import { useSelector } from 'react-redux'; // UX convenience only — the real enforcement is server-side // (requirePermission() in authGuard.js). export default function RequirePermission({ permission }) { const user = useSelector((state) => state.auth.user); const permissions = (user?.roles || []).flatMap( (userRole) => userRole?.role?.permissions?.map( (rolePermission) => rolePermission?.permission?.name ) || [] ); return permissions.includes(permission) ? ( <Outlet /> ) : ( <Navigate to="/dashboard" replace /> ); }
