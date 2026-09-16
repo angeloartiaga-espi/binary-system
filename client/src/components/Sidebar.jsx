@@ -21,11 +21,6 @@ const NAV_ITEMS = [
     to: '/roles',
     permission: 'manage_roles',
   },
-  {
-    label: 'Settings',
-    to: '/settings',
-    permission: 'manage_settings',
-  },
 ];
 
 export default function Sidebar() {
@@ -94,53 +89,3 @@ export default function Sidebar() {
     </aside>
   );
 }
-```
-
-### One important issue
-
-Your current database seed, based on what we've been building, has permissions such as:
-
-```text
-view_dashboard
-manage_users
-manage_properties
-```
-
-But the Sidebar above references additional permissions:
-
-```text
-manage_leads
-manage_site_progress
-manage_news
-manage_careers
-manage_roles
-manage_settings
-```
-
-**Don't add these to the Sidebar until those permissions exist in your database.** Otherwise those navigation items simply won't appear.
-
-For your current stage, I'd actually keep the navigation limited to the permissions you have already implemented:
-
-```js
-const NAV_ITEMS = [
-  {
-    label: 'Overview',
-    to: '/dashboard',
-    permission: 'view_dashboard',
-  },
-  {
-    label: 'Properties',
-    to: '/properties',
-    permission: 'manage_properties',
-  },
-  {
-    label: 'User management',
-    to: '/users',
-    permission: 'manage_users',
-  },
-  {
-    label: 'Role management',
-    to: '/roles',
-    permission: 'manage_roles',
-  },
-];

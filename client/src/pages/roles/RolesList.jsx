@@ -244,21 +244,4 @@ export default function RolesList() {
     </div>
   );
 }
-```
 
-### One thing to check with your backend
-
-This component expects every role returned by `/api/roles` to look approximately like:
-
-```js
-{
-  id: "...",
-  name: "admin",
-  description: "...",
-  permissions: [
-    {
-      id: "...",
-      name: "manage_users"
-    }
-  ],
-  userCount: 5
