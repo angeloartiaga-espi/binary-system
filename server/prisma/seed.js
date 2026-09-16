@@ -15,9 +15,11 @@ async function main() {
     // ==========================================
 
     const permissionNames = [
-        "view_dashboard",
+         "view_dashboard",
         "manage_users",
-        "manage_properties",
+     "manage_properties",
+     "manage_roles",
+        "manage_permissions",
     ];
 
     const permissions = {};
@@ -36,11 +38,11 @@ async function main() {
     // 2. CREATE ROLES
     // ==========================================
 
-    const clientRole = await prisma.role.upsert({
-        where: { name: "client" },
+    const memberRole = await prisma.role.upsert({
+        where: { name: "member" },
         update: {},
         create: {
-            name: "client",
+            name: "member",
             description: "Default role for self-registered users",
         },
     });
@@ -55,22 +57,22 @@ async function main() {
     });
 
     // ==========================================
-    // 3. CLIENT ROLE PERMISSION
+    // 3. MEMBER ROLE PERMISSION
     // ==========================================
 
-    await prisma.rolePermission.upsert({
-        where: {
-            roleId_permissionId: {
-                roleId: clientRole.id,
-                permissionId: permissions.view_dashboard.id,
-            },
-        },
-        update: {},
-        create: {
-            roleId: clientRole.id,
+await prisma.rolePermission.upsert({
+    where: {
+        roleId_permissionId: {
+            roleId: memberRole.id,
             permissionId: permissions.view_dashboard.id,
         },
-    });
+    },
+    update: {},
+    create: {
+        roleId: memberRole.id,
+        permissionId: permissions.view_dashboard.id,
+    },
+});
 
     // ==========================================
     // 4. ADMIN ROLE PERMISSIONS
@@ -157,7 +159,7 @@ async function main() {
     });
 
     console.log(
-        'Seed complete: "client" and "admin" roles + permissions are ready.'
+        'Seed complete: "member" and "admin" roles + permissions are ready.'
     );
 
     console.log(`Admin user created/updated: ${adminUser.email}`);

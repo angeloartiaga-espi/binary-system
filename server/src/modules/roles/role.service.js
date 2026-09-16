@@ -1,7 +1,7 @@
 import prisma from '../../config/db.js';
 
 // These roles are required by the application.
-const PROTECTED_ROLE_NAMES = ['client', 'admin'];
+const PROTECTED_ROLE_NAMES = ['member', 'admin'];
 
 function shapeRole(role) {
     return {
