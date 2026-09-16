@@ -50,6 +50,7 @@ async function authGuard(req, res, next) {
     }
 }
 
+
 function requirePermission(permissionName) {
     return (req, res, next) => {
         const permissions = req.user.roles.flatMap((ur) =>

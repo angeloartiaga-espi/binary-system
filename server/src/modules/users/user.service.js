@@ -1,129 +1,269 @@
+
 import prisma from '../../config/db.js';
-import { hashPassword } from '../../utils/password.js';
+import { hashPassword, comparePassword } from '../../utils/password.js';
 import { generateReferralCode } from '../../utils/referralCode.js';
+import { signToken, verifyToken } from '../../utils/jwt.js';
+import { sendVerificationEmail } from '../../utils/email.js';
 
-function sanitize(user) {
-    const { password, ...rest } = user;
-    return rest;
-}
+const PRIVACY_NOTICE_VERSION = 'v1.0-2026';
 
-async function listUsers({ page = 1, limit = 10, search = '' }) {
-    const skip = (page - 1) * limit;
-
-    const where = search
-        ? {
-            OR: [
-                { firstName: { contains: search, mode: 'insensitive' } },
-                { lastName: { contains: search, mode: 'insensitive' } },
-                { email: { contains: search, mode: 'insensitive' } },
-            ],
-        }
-        : {};
-
-    const [items, total] = await Promise.all([
-        prisma.user.findMany({
-            where,
-            skip,
-            take: Number(limit),
-            orderBy: { createdAt: 'desc' },
-            include: {
-                roles: {
-                    include: {
-                        role: true,
+/**
+ * Get a user with their roles and permissions.
+ *
+ * User
+ *  └── UserRole
+ *       └── Role
+ *            └── RolePermission
+ *                 └── Permission
+ */
+const userWithRolesAndPermissions = {
+    roles: {
+        include: {
+            role: {
+                include: {
+                    permissions: {
+                        include: {
+                            permission: true,
+                        },
                     },
                 },
             },
-        }),
-
-        prisma.user.count({ where }),
-    ]);
-
-    return {
-        items: items.map(sanitize),
-        total,
-        page: Number(page),
-        totalPages: Math.ceil(total / limit) || 1,
-    };
-}
-
-async function getUserById(id) {
-    const user = await prisma.user.findUnique({
-        where: { id },
-        include: {
-            roles: {
-                include: {
-                    role: true,
-                },
-            },
         },
-    });
+    },
+};
 
-    if (!user) {
-        const err = new Error('User not found');
-        err.status = 404;
-        throw err;
-    }
-
-    return sanitize(user);
+/**
+ * Remove sensitive information before returning a user.
+ */
+function sanitizeUser(user) {
+    const { password: _pw, ...safeUser } = user;
+    return safeUser;
 }
 
-// Admin-created user — same shape as self-registration but callable
-// directly, and lets the admin set membershipStatus/role up front.
-async function createUser(data) {
+/**
+ * Register a new client account.
+ *
+ * Process:
+ * 1. Check if email already exists
+ * 2. Hash password
+ * 3. Generate referral code
+ * 4. Find default client role
+ * 5. Create user
+ * 6. Assign client role
+ * 7. Save privacy consent
+ * 8. Generate email verification token
+ * 9. Send verification email
+ */
+async function registerUser(
+    {
+        firstName,
+        lastName,
+        email,
+        phone,
+        password,
+        referrerCode,
+    },
+    idImageUrl
+) {
     const existing = await prisma.user.findUnique({
-        where: { email: data.email },
+        where: { email },
     });
 
     if (existing) {
-        const err = new Error('A user with this email already exists');
+        const err = new Error(
+            'An account with this email already exists'
+        );
         err.status = 409;
         throw err;
     }
 
-    const hashedPassword = await hashPassword(data.password);
-    const referralCode = generateReferralCode(data.firstName);
+    const hashedPassword = await hashPassword(password);
+    const referralCode = generateReferralCode(firstName);
 
-    const roleName = data.role || 'client';
-
-    const role = await prisma.role.findUnique({
-        where: { name: roleName },
+    // Every self-registered user starts with the client role.
+    const clientRole = await prisma.role.findUnique({
+        where: { name: 'client' },
     });
 
-    if (!role) {
+    if (!clientRole) {
         const err = new Error(
-            `Role "${roleName}" does not exist — run the seed script`
+            'Default "client" role not found — run "npx prisma db seed" first'
         );
-        err.status = 400;
+        err.status = 500;
         throw err;
     }
 
+    /**
+     * User creation and role assignment happen in one transaction.
+     *
+     * If either operation fails, neither is committed.
+     * This prevents users from being created without a role.
+     */
     const user = await prisma.$transaction(async (tx) => {
         const created = await tx.user.create({
             data: {
-                firstName: data.firstName,
-                lastName: data.lastName,
-                email: data.email,
-                phone: data.phone,
+                firstName,
+                lastName,
+                email,
+                phone,
                 password: hashedPassword,
+                idImage: idImageUrl,
+
+                // Referral / membership
                 referralCode,
-                membershipStatus: data.membershipStatus || 'BRONZE',
+                referrerCode: referrerCode || null,
+                membershipStatus: 'BRONZE',
+
+                // Privacy
                 privacyConsent: true,
                 consentDate: new Date(),
-                privacyNoticeVersion: 'admin-created',
+                privacyNoticeVersion: PRIVACY_NOTICE_VERSION,
+
+                // Email verification
+                emailVerified: false,
             },
         });
 
         await tx.userRole.create({
             data: {
                 userId: created.id,
-                roleId: role.id,
+                roleId: clientRole.id,
             },
         });
 
         return created;
     });
 
-    return sanitize(user);
+    /**
+     * Generate a verification token that expires after 24 hours.
+     *
+     * "purpose" prevents this token from being accidentally
+     * accepted by another token-based endpoint.
+     */
+    const verifyToken = signToken(
+        {
+            id: user.id,
+            purpose: 'verify-email',
+        },
+        '1d'
+    );
+
+    const verifyUrl =
+        `${process.env.CLIENT_URL}/verify-email/${verifyToken}`;
+
+    // Email failure should not cause registration to fail.
+    sendVerificationEmail(
+        user.email,
+        user.firstName,
+        verifyUrl
+    ).catch((err) => {
+        console.error(
+            'Failed to send verification email:',
+            err.message
+        );
+    });
+
+    return sanitizeUser(user);
+}
+
+/**
+ * Login user and return:
+ *
+ * {
+ *   token,
+ *   user: {
+ *      ...user,
+ *      roles: [
+ *          {
+ *              role: {
+ *                  name,
+ *                  permissions: [...]
+ *              }
+ *          }
+ *      ]
+ *   }
+ * }
+ */
+async function loginUser({ email, password }) {
+    const user = await prisma.user.findUnique({
+        where: { email },
+        include: userWithRolesAndPermissions,
+    });
+
+    // Do not reveal whether the email exists.
+    if (!user || !user.isActive) {
+        const err = new Error('Invalid email or password');
+        err.status = 401;
+        throw err;
+    }
+
+    const passwordMatches = await comparePassword(
+        password,
+        user.password
+    );
+
+    if (!passwordMatches) {
+        const err = new Error('Invalid email or password');
+        err.status = 401;
+        throw err;
+    }
+
+    /**
+     * Optional email verification enforcement.
+     *
+     * If you are not ready to prevent login before verification,
+     * leave this commented for now.
+     */
+    /*
+    if (!user.emailVerified) {
+        const err = new Error('Please verify your email before logging in');
+        err.status = 403;
+        throw err;
+    }
+    */
+
+    const token = signToken({
+        id: user.id,
+    });
+
+    return {
+        token,
+        user: sanitizeUser(user),
+    };
+}
+
+/**
+ * Verify user's email address.
+ */
+async function verifyEmail(token) {
+    let decoded;
+
+    try {
+        decoded = verifyToken(token);
+    } catch {
+        const err = new Error(
+            'This verification link is invalid or has expired'
+        );
+        err.status = 400;
+        throw err;
+    }
+
+    if (decoded.purpose !== 'verify-email') {
+        const err = new Error('Invalid verification link');
+        err.status = 400;
+        throw err;
+    }
+
+    const user = await prisma.user.update({
+        where: {
+            id: decoded.id,
+        },
+        data: {
+            emailVerified: true,
+        },
+    });
+
+    return sanitizeUser(user);
 }
 
 async function updateUser(id, data) {
@@ -149,6 +289,23 @@ async function updateUser(id, data) {
         }
     }
 
+    // If a role was supplied, find it first.
+    let newRole = null;
+
+    if (data.role) {
+        newRole = await prisma.role.findUnique({
+            where: { name: data.role },
+        });
+
+        if (!newRole) {
+            const err = new Error(
+                `Role "${data.role}" does not exist`
+            );
+            err.status = 400;
+            throw err;
+        }
+    }
+
     const updateData = {
         firstName: data.firstName ?? existingUser.firstName,
         lastName: data.lastName ?? existingUser.lastName,
@@ -158,41 +315,41 @@ async function updateUser(id, data) {
             data.membershipStatus ?? existingUser.membershipStatus,
     };
 
-    // Only re-hash and update the password if a new one was actually sent.
     if (data.password) {
         updateData.password = await hashPassword(data.password);
     }
 
-    const updated = await prisma.user.update({
-        where: { id },
-        data: updateData,
+    const updated = await prisma.$transaction(async (tx) => {
+        const user = await tx.user.update({
+            where: { id },
+            data: updateData,
+        });
+
+        if (newRole) {
+            // The current UI uses one role per user.
+            // Remove the old role and assign the new one.
+            await tx.userRole.deleteMany({
+                where: { userId: id },
+            });
+
+            await tx.userRole.create({
+                data: {
+                    userId: id,
+                    roleId: newRole.id,
+                },
+            });
+        }
+
+        return user;
     });
 
     return sanitize(updated);
 }
 
-// Soft delete: flips isActive to false instead of removing the row.
-async function deleteUser(id) {
-    const existingUser = await prisma.user.findUnique({
-        where: { id },
-    });
-
-    if (!existingUser) {
-        const err = new Error('User not found');
-        err.status = 404;
-        throw err;
-    }
-
-    await prisma.user.update({
-        where: { id },
-        data: { isActive: false },
-    });
-}
-
 export {
-    listUsers,
-    getUserById,
-    createUser,
-    updateUser,
-    deleteUser,
+    registerUser,
+    loginUser,
+    verifyEmail,
+    updateUser
 };
+
