@@ -30,7 +30,7 @@ export default function RoleFormModal({
 
   const isProtectedName =
     isEdit &&
-    ['client', 'admin'].includes(existingRole.name);
+    ['member', 'admin'].includes(existingRole.name);
 
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState(null);

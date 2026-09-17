@@ -1,8 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
-// UX convenience only — the real enforcement is server-side
-// (requirePermission() in authGuard.js).
 export default function RequirePermission({ permission }) {
   const user = useSelector((state) => state.auth.user);
 

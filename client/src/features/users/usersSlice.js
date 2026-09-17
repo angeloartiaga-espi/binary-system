@@ -3,16 +3,34 @@ import api from '../../app/axios';
 
 export const fetchUsers = createAsyncThunk(
     'users/fetchAll',
-    async ({ page = 1, search = '' } = {}) => {
-        const res = await api.get('/users', { params: { page, search } });
-        return res.data.data; // { items, total, page, totalPages }
+    async ({ page = 1, search = '' } = {}, { rejectWithValue }) => {
+        try {
+            const res = await api.get('/users', {
+                params: { page, search },
+            });
+
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(
+                err.response?.data?.message || 'Failed to fetch users'
+            );
+        }
     }
 );
 
-export const fetchUserById = createAsyncThunk('users/fetchOne', async (id) => {
-    const res = await api.get(`/users/${id}`);
-    return res.data.data;
-});
+export const fetchUserById = createAsyncThunk(
+    'users/fetchOne',
+    async (id, { rejectWithValue }) => {
+        try {
+            const res = await api.get(`/users/${id}`);
+            return res.data.data;
+        } catch (err) {
+            return rejectWithValue(
+                err.response?.data?.message || 'Failed to fetch user'
+            );
+        }
+    }
+);
 
 export const createUser = createAsyncThunk(
     'users/create',
@@ -21,7 +39,9 @@ export const createUser = createAsyncThunk(
             const res = await api.post('/users', payload);
             return res.data.data;
         } catch (err) {
-            return rejectWithValue(err.response?.data?.message || 'Failed to create user');
+            return rejectWithValue(
+                err.response?.data?.message || 'Failed to create user'
+            );
         }
     }
 );
@@ -33,7 +53,9 @@ export const updateUser = createAsyncThunk(
             const res = await api.put(`/users/${id}`, payload);
             return res.data.data;
         } catch (err) {
-            return rejectWithValue(err.response?.data?.message || 'Failed to update user');
+            return rejectWithValue(
+                err.response?.data?.message || 'Failed to update user'
+            );
         }
     }
 );
@@ -45,13 +67,16 @@ export const deleteUser = createAsyncThunk(
             await api.delete(`/users/${id}`);
             return id;
         } catch (err) {
-            return rejectWithValue(err.response?.data?.message || 'Failed to delete user');
+            return rejectWithValue(
+                err.response?.data?.message || 'Failed to delete user'
+            );
         }
     }
 );
 
 const usersSlice = createSlice({
     name: 'users',
+
     initialState: {
         list: [],
         total: 0,
@@ -61,27 +86,53 @@ const usersSlice = createSlice({
         status: 'idle',
         error: null,
     },
+
     reducers: {},
+
     extraReducers: (builder) => {
         builder
+
+            // Fetch users
             .addCase(fetchUsers.pending, (state) => {
                 state.status = 'loading';
+                state.error = null;
             })
+
             .addCase(fetchUsers.fulfilled, (state, action) => {
                 state.status = 'succeeded';
-                state.list = action.payload.items;
-                state.total = action.payload.total;
-                state.page = action.payload.page;
-                state.totalPages = action.payload.totalPages;
+
+                const data = action.payload || {};
+
+                state.list = Array.isArray(data.users)
+                    ? data.users
+                    : [];
+
+                state.total = data.pagination?.total ?? 0;
+                state.page = data.pagination?.page ?? 1;
+                state.totalPages =
+                    data.pagination?.totalPages ?? 1;
             })
-            .addCase(fetchUsers.rejected, (state) => {
+
+            .addCase(fetchUsers.rejected, (state, action) => {
                 state.status = 'failed';
+                state.error =
+                    action.payload ||
+                    action.error?.message ||
+                    'Failed to fetch users';
+
+                state.list = [];
             })
+
+            // Fetch one user
             .addCase(fetchUserById.fulfilled, (state, action) => {
                 state.selectedUser = action.payload;
             })
+
+            // Delete / deactivate user
             .addCase(deleteUser.fulfilled, (state, action) => {
-                state.list = state.list.filter((u) => u.id !== action.payload);
+                state.list = state.list.filter(
+                    (u) => u.id !== action.payload
+                );
             });
     },
 });
