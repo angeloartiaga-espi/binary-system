@@ -17,6 +17,9 @@ import DashboardLayout from "./components/DashboardLayout";
 import PrivateRoute from "./routes/PrivateRoute";
 import RequirePermission from "./routes/RequirePermission";
 
+import PermissionsList from "./pages/permissions/PermissionLists";
+import AssignPermission from "./pages/permissions/AssignPermission";
+
 import { fetchMe } from "./features/auth/authSlice";
 
 export default function App() {
@@ -57,6 +60,13 @@ export default function App() {
           <Route element={<RequirePermission permission="manage_roles" />}>
             <Route path="/roles" element={<RolesList />} />
             <Route path="/roles/assign" element={<AssignRole />} />
+          </Route>
+
+          <Route
+            element={<RequirePermission permission="manage_permissions" />}
+          >
+            <Route path="/permissions" element={<PermissionsList />} />
+            <Route path="/permissions/assign" element={<AssignPermission />} />
           </Route>
         </Route>
       </Route>
