@@ -10,7 +10,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-
 }
 
 enum MembershipStatus {
@@ -20,27 +19,69 @@ enum MembershipStatus {
   PLATINUM
 }
 
-model User {
-  id       String  @id @default(uuid()) @db.Uuid
-  firstName String
-  lastName  String
-  email     String  @unique
-  password  String?
-  idImage   String?
-  phone     String?
+enum CivilStatus {
+  SINGLE
+  MARRIED
+  WIDOWED
+  DIVORCED
+  SEPARATED
+}
 
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+model User {
+  id         String  @id @default(uuid()) @db.Uuid
+  firstName  String
+  middleName String?
+  lastName   String
+
+  email    String  @unique
+  password String?
+
+  // Contact Information
+  phone        String?
+  otherContact String?
+
+  // Address
+  city    String?
+  country String?
+
+  // Personal Information
+  birthdate    DateTime?
+  placeOfBirth String?
+  civilStatus  CivilStatus?
+  gender       Gender?
+
+  // Tax Information
+  taxIdentificationNumber String?
+
+  // Spouse Information
+  spouseName String?
+
+  // Identification
+  idImage String?
+
+  // Referral Information
   referralCode String  @unique
   referrerCode String?
 
+  // Membership
   membershipStatus MembershipStatus @default(BRONZE)
 
+  // Privacy
   privacyConsent       Boolean   @default(false)
   consentDate          DateTime?
   privacyNoticeVersion String?
 
-  isActive Boolean @default(true) // soft-delete flag
+  // Account Status
+  isActive      Boolean @default(true) // soft-delete flag
   emailVerified Boolean @default(false)
 
+  // Roles
   roles UserRole[]
 
   createdAt DateTime @default(now())
@@ -48,40 +89,44 @@ model User {
 }
 
 model Role {
-  id          String @id @default(uuid()) @db.Uuid
-  name        String @unique
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String           @unique
   description String?
   users       UserRole[]
   permissions RolePermission[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 model Permission {
-  id          String @id @default(uuid()) @db.Uuid
-  name        String @unique
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String           @unique
   description String?
-  roles RolePermission[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 model UserRole {
-  id     String @id @default(uuid()) @db.Uuid
-  userId String @db.Uuid
-  roleId String @db.Uuid
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  roleId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+
   @@unique([userId, roleId])
 }
 
 model RolePermission {
-  id           String @id @default(uuid()) @db.Uuid
-  roleId       String @db.Uuid
-  permissionId String @db.Uuid
+  id           String   @id @default(uuid()) @db.Uuid
+  roleId       String   @db.Uuid
+  permissionId String   @db.Uuid
+  createdAt    DateTime @default(now())
+
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+
   @@unique([roleId, permissionId])
 }
