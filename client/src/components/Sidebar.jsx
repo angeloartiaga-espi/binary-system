@@ -3,10 +3,13 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
 import { logout } from "../features/auth/authSlice";
 
-// Items with `children` render as expandable sidebar groups.
+// Items with `children` render as expandable navigation groups.
 // `permission` hides the item unless the user has that permission.
 const NAV_ITEMS = [
-  { label: "Dashboard", to: "/dashboard" },
+  {
+    label: "Dashboard",
+    to: "/dashboard",
+  },
 
   {
     label: "User management",
@@ -18,8 +21,14 @@ const NAV_ITEMS = [
     label: "Role management",
     permission: "manage_roles",
     children: [
-      { label: "Role List", to: "/roles" },
-      { label: "Assign Role", to: "/roles/assign" },
+      {
+        label: "Role List",
+        to: "/roles",
+      },
+      {
+        label: "Assign Role",
+        to: "/roles/assign",
+      },
     ],
   },
 
@@ -27,8 +36,14 @@ const NAV_ITEMS = [
     label: "Permission management",
     permission: "manage_permissions",
     children: [
-      { label: "Permission List", to: "/permissions" },
-      { label: "Assign Permission", to: "/permissions/assign" },
+      {
+        label: "Permission List",
+        to: "/permissions",
+      },
+      {
+        label: "Assign Permission",
+        to: "/permissions/assign",
+      },
     ],
   },
 ];
@@ -40,8 +55,13 @@ const linkClasses = ({ isActive }) =>
       : "border-transparent text-gray-300 hover:bg-white/5"
   }`;
 
+/* =========================
+   LOGO
+========================= */
+
 function Logo({ idPrefix }) {
-  // Unique gradient ids per instance: the logo renders twice (top bar + drawer)
+  // Unique gradient IDs because the logo appears twice:
+  // desktop sidebar + mobile top bar
   const goldId = `${idPrefix}-elGold`;
   const gold2Id = `${idPrefix}-elGold2`;
 
@@ -68,6 +88,7 @@ function Logo({ idPrefix }) {
               <stop offset=".62" stopColor="#f4dc98" />
               <stop offset="1" stopColor="#c8963a" />
             </linearGradient>
+
             <linearGradient
               id={gold2Id}
               gradientUnits="userSpaceOnUse"
@@ -81,30 +102,36 @@ function Logo({ idPrefix }) {
               <stop offset="1" stopColor="#c8963a" />
             </linearGradient>
           </defs>
+
           <path
             fill={`url(#${goldId})`}
             d="M390 62 L593 192 L605 232 L390 110 L228 213 L228 265 L420 265 L383 297 L228 297 L228 357 L385 357 L360 388 L318 399 L228 399 L228 420 L185 420 L185 193 Z"
           />
+
           <path
             fill={`url(#${goldId})`}
             d="M185 480 L420 467 L420 510 L185 510 Z"
           />
+
           <g fill={`url(#${goldId})`}>
             <rect x="359" y="158" width="26" height="26" />
             <rect x="393" y="158" width="26" height="26" />
             <rect x="359" y="192" width="26" height="26" />
             <rect x="393" y="192" width="26" height="26" />
           </g>
+
           <g fill="#12544F">
             <path d="M451 183 L501 213 L501 347 L451 360 Z" />
             <path d="M451 410 L501 390 L501 467 L618 467 L658 510 L451 510 Z" />
           </g>
+
           <path
             fill={`url(#${gold2Id})`}
             d="M165 348 C120 370 95 395 98 420 C110 445 190 445 290 425 C450 392 610 320 668 262 C690 240 680 222 640 217 C625 215 612 216 604 222 C608 240 570 270 480 310 C390 348 290 385 200 400 C160 408 130 410 125 398 C124 380 145 362 165 348 Z"
           />
         </svg>
       </div>
+
       <span className="text-xl font-bold tracking-wide">
         <span className="text-[#d9a93f]">Estate</span>
         <span className="text-[#0b6b4a]">Link</span>
@@ -113,7 +140,11 @@ function Logo({ idPrefix }) {
   );
 }
 
-function NavGroup({ item }) {
+/* =========================
+   NAVIGATION GROUP
+========================= */
+
+function NavGroup({ item, onNavigate }) {
   const location = useLocation();
 
   const hasActiveChild = item.children.some(
@@ -151,6 +182,7 @@ function NavGroup({ item }) {
               key={child.to}
               to={child.to}
               end
+              onClick={onNavigate}
               className={({ isActive }) =>
                 `block px-4 py-2 text-sm rounded-md mb-1 transition-colors ${
                   isActive
@@ -168,38 +200,51 @@ function NavGroup({ item }) {
   );
 }
 
+/* =========================
+   SIDEBAR
+========================= */
+
 export default function Sidebar({ permissions = [] }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Only used below the `lg` breakpoint; on desktop the sidebar is always visible.
+  // Controls the mobile drawer
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  // Only show navigation items the user has permission to access
   const visibleItems = NAV_ITEMS.filter(
     (item) => !item.permission || permissions.includes(item.permission),
   );
 
+  // Close mobile sidebar
+  const closeMobileMenu = () => {
+    setMobileOpen(false);
+  };
+
+  // Logout
   const handleLogout = () => {
     dispatch(logout());
     navigate("/login");
   };
 
-  // Close the drawer after navigating.
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
+  /* =========================
+     LOCK PAGE SCROLL WHEN MENU
+     IS OPEN ON MOBILE
+  ========================= */
 
-  // While the drawer is open: lock page scroll and close on Escape.
   useEffect(() => {
     if (!mobileOpen) return;
 
     const previousOverflow = document.body.style.overflow;
+
     document.body.style.overflow = "hidden";
 
     const onKeyDown = (e) => {
-      if (e.key === "Escape") setMobileOpen(false);
+      if (e.key === "Escape") {
+        setMobileOpen(false);
+      }
     };
+
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
@@ -208,19 +253,33 @@ export default function Sidebar({ permissions = [] }) {
     };
   }, [mobileOpen]);
 
-  // Reset if the window is resized up to desktop while the drawer is open.
+  /* =========================
+     CLOSE MOBILE MENU WHEN
+     RESIZED TO DESKTOP
+  ========================= */
+
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)");
+
     const onChange = (e) => {
-      if (e.matches) setMobileOpen(false);
+      if (e.matches) {
+        setMobileOpen(false);
+      }
     };
+
     mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
+
+    return () => {
+      mq.removeEventListener("change", onChange);
+    };
   }, []);
 
   return (
     <>
-      {/* Mobile top bar */}
+      {/* =========================
+          MOBILE TOP BAR
+      ========================= */}
+
       <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center gap-3 bg-brand-dark px-4 text-white lg:hidden">
         <button
           type="button"
@@ -242,17 +301,25 @@ export default function Sidebar({ permissions = [] }) {
             <path d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+
         <Logo idPrefix="top" />
       </header>
 
-      {/* Backdrop */}
+      {/* =========================
+          MOBILE BACKDROP
+      ========================= */}
+
       <div
-        onClick={() => setMobileOpen(false)}
+        onClick={closeMobileMenu}
         aria-hidden="true"
         className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-200 lg:hidden ${
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       />
+
+      {/* =========================
+          SIDEBAR
+      ========================= */}
 
       <aside
         id="app-sidebar"
@@ -260,11 +327,16 @@ export default function Sidebar({ permissions = [] }) {
           mobileOpen ? "visible translate-x-0" : "invisible -translate-x-full"
         }`}
       >
+        {/* =========================
+            SIDEBAR HEADER
+        ========================= */}
+
         <div className="flex items-center justify-between px-6 py-6">
           <Logo idPrefix="drawer" />
+
           <button
             type="button"
-            onClick={() => setMobileOpen(false)}
+            onClick={closeMobileMenu}
             aria-label="Close menu"
             className="-mr-3 flex h-10 w-10 items-center justify-center rounded-md text-gray-300 hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold lg:hidden"
           >
@@ -282,20 +354,38 @@ export default function Sidebar({ permissions = [] }) {
           </button>
         </div>
 
+        {/* =========================
+            NAVIGATION
+        ========================= */}
+
         <nav className="flex-1 overflow-y-auto px-2">
           {visibleItems.map((item) =>
             item.children ? (
-              <NavGroup key={item.label} item={item} />
+              <NavGroup
+                key={item.label}
+                item={item}
+                onNavigate={closeMobileMenu}
+              />
             ) : (
-              <NavLink key={item.to} to={item.to} className={linkClasses}>
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={closeMobileMenu}
+                className={linkClasses}
+              >
                 {item.label}
               </NavLink>
             ),
           )}
         </nav>
 
+        {/* =========================
+            LOGOUT
+        ========================= */}
+
         <div className="border-t border-white/10 px-2 pb-6 pt-4">
           <button
+            type="button"
             onClick={handleLogout}
             className="w-full rounded-md px-4 py-3 text-left text-sm text-gray-300 hover:bg-white/5 hover:text-white"
           >
