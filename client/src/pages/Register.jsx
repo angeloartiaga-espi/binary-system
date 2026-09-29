@@ -60,8 +60,6 @@ export default function Register() {
     const code = form.referrerCode.trim();
 
     if (!code) {
-      setReferrer(null);
-      setReferrerError("");
       return;
     }
 
@@ -341,7 +339,7 @@ export default function Register() {
 
         <div className="mb-4">
           <FormInput
-            label="Referral code (optional)"
+            label="Referral code"
             name="referrerCode"
             value={form.referrerCode}
             onChange={handleChange}
@@ -441,7 +439,7 @@ export default function Register() {
         <button
           type="submit"
           disabled={!agreed || status === "loading"}
-          className="w-full bg-gradient-to-r from-brand-gold to-yellow-600 text-brand-dark font-semibold py-2 rounded-md disabled:opacity-50"
+          className="w-full bg-linear-to-r from-brand-gold to-yellow-600 text-brand-dark font-semibold py-2 rounded-md disabled:opacity-50"
         >
           {status === "loading" ? "Creating account..." : "Create account"}
         </button>
