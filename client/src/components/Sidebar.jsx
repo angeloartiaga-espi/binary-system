@@ -46,6 +46,11 @@ const NAV_ITEMS = [
       },
     ],
   },
+  {
+    label: "Inventory Management",
+    permission: "manage_properties",
+    to: "/properties",
+  },
 ];
 
 const linkClasses = ({ isActive }) =>

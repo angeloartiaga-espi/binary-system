@@ -19,6 +19,7 @@ import RequirePermission from "./routes/RequirePermission";
 
 import PermissionsList from "./pages/permissions/PermissionLists";
 import AssignPermission from "./pages/permissions/AssignPermission";
+import ProjectLocationsList from "./pages/project-locations/ProjectLocationList";
 
 import { fetchMe } from "./features/auth/authSlice";
 
@@ -62,11 +63,17 @@ export default function App() {
             <Route path="/roles/assign" element={<AssignRole />} />
           </Route>
 
+          {/* Manage Permission */}
           <Route
             element={<RequirePermission permission="manage_permissions" />}
           >
             <Route path="/permissions" element={<PermissionsList />} />
             <Route path="/permissions/assign" element={<AssignPermission />} />
+          </Route>
+
+          {/* Manage Properties */}
+          <Route element={<RequirePermission permission="manage_properties" />}>
+            <Route path="/properties" element={<ProjectLocationsList />} />
           </Route>
         </Route>
       </Route>

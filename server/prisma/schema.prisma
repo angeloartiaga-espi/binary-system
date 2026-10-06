@@ -33,6 +33,20 @@ enum Gender {
   OTHER
 }
 
+enum ProjectStatus {
+  ACTIVE
+  INACTIVE
+  COMPLETED
+}
+
+enum LotStatus {
+  OPEN
+  SOLD
+  RE_OPEN
+  HOLD
+  RESERVED
+}
+
 model User {
   id         String  @id @default(uuid()) @db.Uuid
   firstName  String
@@ -129,4 +143,98 @@ model RolePermission {
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permissionId])
+}
+
+model ProjectLocation {
+  id String @id @default(uuid())
+
+  projectName String
+  location    String
+
+  // Total property/project area
+  totalLotAreaSqm Decimal @db.Decimal(12, 2)
+
+  // Area allocated/deducted for roads
+  roadAreaSqm Decimal? @db.Decimal(12, 2)
+
+  // Remaining available/saleable area
+  availableLotAreaSqm Decimal? @db.Decimal(12, 2)
+
+  description String?
+
+  status ProjectStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lots Lot[]
+
+  @@index([projectName])
+  @@index([location])
+  @@index([status])
+}
+
+model Lot {
+  id String @id @default(uuid()) @db.Uuid
+
+  projectLocationId String
+
+  projectLocation ProjectLocation @relation(fields: [projectLocationId], references: [id], onDelete: Cascade)
+
+  // Example:
+  // Lot 1
+  // Lot 2
+  // Block 1 Lot 5
+  lotNumber String
+
+  // Actual lot size
+  lotAreaSqm Decimal @db.Decimal(10, 2)
+
+  // Inventory status
+  status LotStatus @default(OPEN)
+
+  // Optional notes
+  remarks String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Quotation options for this lot
+  quotations LotQuotation[]
+
+  @@unique([projectLocationId, lotNumber])
+  @@index([projectLocationId])
+}
+
+model LotQuotation {
+  id String @id @default(uuid()) @db.Uuid
+
+  lotId String @db.Uuid
+
+  lot Lot @relation(fields: [lotId], references: [id], onDelete: Cascade)
+
+  // Proposed house/floor area
+  floorAreaSqm Decimal @db.Decimal(10, 2)
+
+  // Pricing
+  totalPrice    Decimal @db.Decimal(15, 2)
+  contractPrice Decimal @db.Decimal(15, 2)
+
+  // Payment
+  downpayment Decimal @db.Decimal(15, 2)
+  balance     Decimal @db.Decimal(15, 2)
+
+  // Interest rate for quotation
+  annualInterestRate Decimal @default(6.5) @db.Decimal(5, 2)
+
+  // Computed monthly amortization
+  monthlyAmortization10Years Decimal? @db.Decimal(15, 2)
+  monthlyAmortization15Years Decimal? @db.Decimal(15, 2)
+  monthlyAmortization20Years Decimal? @db.Decimal(15, 2)
+  monthlyAmortization25Years Decimal? @db.Decimal(15, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([lotId])
 }
