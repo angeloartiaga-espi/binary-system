@@ -18,6 +18,12 @@ const NAV_ITEMS = [
   },
 
   {
+    label: "Inventory Management",
+    permission: "manage_properties",
+    to: "/properties",
+  },
+
+  {
     label: "Role management",
     permission: "manage_roles",
     children: [
@@ -45,11 +51,6 @@ const NAV_ITEMS = [
         to: "/permissions/assign",
       },
     ],
-  },
-  {
-    label: "Inventory Management",
-    permission: "manage_properties",
-    to: "/properties",
   },
 ];
 

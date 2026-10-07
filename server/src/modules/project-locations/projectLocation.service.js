@@ -1,40 +1,58 @@
 import prisma from "../../config/db.js";
 
-// Prisma returns Decimal fields as Decimal.js instances, which don't
-// serialize to JSON the way a plain number does — convert explicitly so
-// the frontend always receives real numbers, not decimal objects/strings.
+// Prisma Decimal fields are converted to regular JavaScript numbers
+// before being returned to the frontend.
 function toNumber(value) {
   return value === null || value === undefined ? value : Number(value);
 }
 
+// Shape the project location response for the frontend.
+//
+// Cuts, Inc. Road:
+//   SOLD + HOLD + RESERVED
+//
+// Available Cuts:
+//   OPEN + RE_OPEN + RFO
 function shapeProjectLocation(project) {
+  const statusCounts = project.lots
+    ? project.lots.reduce((counts, lot) => {
+        counts[lot.status] = (counts[lot.status] || 0) + 1;
+        return counts;
+      }, {})
+    : {};
+
+  const cutsIncRoad =
+    (statusCounts.SOLD || 0) +
+    (statusCounts.HOLD || 0) +
+    (statusCounts.RESERVED || 0);
+
+  const availableCuts =
+    (statusCounts.OPEN || 0) +
+    (statusCounts.RE_OPEN || 0) +
+    (statusCounts.RFO || 0);
+
   return {
     id: project.id,
     projectName: project.projectName,
     location: project.location,
+
     totalLotAreaSqm: toNumber(project.totalLotAreaSqm),
-    roadAreaSqm: toNumber(project.roadAreaSqm),
-    availableLotAreaSqm: toNumber(project.availableLotAreaSqm),
+
     description: project.description,
     status: project.status,
-    lotCount: project._count?.lots ?? undefined,
+
+    // Total number of lots
+    lotCount: project._count?.lots ?? project.lots?.length ?? 0,
+
+    // SOLD + HOLD + RESERVED
+    cutsIncRoad,
+
+    // OPEN + RE_OPEN + RFO
+    availableCuts,
+
     createdAt: project.createdAt,
     updatedAt: project.updatedAt,
   };
-}
-
-// If availableLotAreaSqm wasn't explicitly provided, derive it from
-// total - road so the three numbers always stay consistent by default.
-function deriveAvailableArea({
-  totalLotAreaSqm,
-  roadAreaSqm,
-  availableLotAreaSqm,
-}) {
-  if (availableLotAreaSqm !== undefined && availableLotAreaSqm !== null) {
-    return availableLotAreaSqm;
-  }
-  const road = roadAreaSqm ?? 0;
-  return totalLotAreaSqm - road;
 }
 
 async function listProjectLocations({
@@ -47,11 +65,22 @@ async function listProjectLocations({
 
   const where = {
     ...(status ? { status } : {}),
+
     ...(search
       ? {
           OR: [
-            { projectName: { contains: search, mode: "insensitive" } },
-            { location: { contains: search, mode: "insensitive" } },
+            {
+              projectName: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              location: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
           ],
         }
       : {}),
@@ -62,24 +91,60 @@ async function listProjectLocations({
       where,
       skip,
       take: Number(limit),
-      orderBy: { createdAt: "desc" },
-      include: { _count: { select: { lots: true } } },
+      orderBy: {
+        createdAt: "desc",
+      },
+
+      include: {
+        // We need the individual lot statuses
+        // to calculate Cuts, Inc. Road and Available Cuts.
+        lots: {
+          select: {
+            status: true,
+          },
+        },
+
+        _count: {
+          select: {
+            lots: true,
+          },
+        },
+      },
     }),
-    prisma.projectLocation.count({ where }),
+
+    prisma.projectLocation.count({
+      where,
+    }),
   ]);
 
   return {
     items: items.map(shapeProjectLocation),
     total,
     page: Number(page),
-    totalPages: Math.ceil(total / limit) || 1,
+    totalPages: Math.ceil(total / Number(limit)) || 1,
   };
 }
 
 async function getProjectLocationById(id) {
   const project = await prisma.projectLocation.findUnique({
-    where: { id },
-    include: { _count: { select: { lots: true } } },
+    where: {
+      id,
+    },
+
+    include: {
+      // Get lot statuses for the calculated counts
+      lots: {
+        select: {
+          status: true,
+        },
+      },
+
+      _count: {
+        select: {
+          lots: true,
+        },
+      },
+    },
   });
 
   if (!project) {
@@ -93,12 +158,17 @@ async function getProjectLocationById(id) {
 
 async function createProjectLocation(data) {
   const existing = await prisma.projectLocation.findFirst({
-    where: { projectName: data.projectName, location: data.location },
+    where: {
+      projectName: data.projectName,
+      location: data.location,
+    },
   });
+
   if (existing) {
     const err = new Error(
       "A project with this name already exists at this location",
     );
+
     err.status = 409;
     throw err;
   }
@@ -108,8 +178,6 @@ async function createProjectLocation(data) {
       projectName: data.projectName,
       location: data.location,
       totalLotAreaSqm: data.totalLotAreaSqm,
-      roadAreaSqm: data.roadAreaSqm ?? null,
-      availableLotAreaSqm: deriveAvailableArea(data),
       description: data.description || null,
       status: data.status || "ACTIVE",
     },
@@ -120,44 +188,34 @@ async function createProjectLocation(data) {
 
 async function updateProjectLocation(id, data) {
   const existingProject = await prisma.projectLocation.findUnique({
-    where: { id },
+    where: {
+      id,
+    },
   });
+
   if (!existingProject) {
     const err = new Error("Project location not found");
     err.status = 404;
     throw err;
   }
 
-  const totalLotAreaSqm =
-    data.totalLotAreaSqm ?? Number(existingProject.totalLotAreaSqm);
-  const roadAreaSqm =
-    data.roadAreaSqm !== undefined
-      ? data.roadAreaSqm
-      : toNumber(existingProject.roadAreaSqm);
-
-  // Only auto-recompute availableLotAreaSqm when the caller didn't send an
-  // explicit value AND one of the inputs it depends on actually changed —
-  // otherwise an edit that only touches, say, the description would
-  // silently overwrite a manually-set available area.
-  const availableLotAreaSqm =
-    data.availableLotAreaSqm !== undefined
-      ? data.availableLotAreaSqm
-      : data.totalLotAreaSqm !== undefined || data.roadAreaSqm !== undefined
-        ? totalLotAreaSqm - (roadAreaSqm ?? 0)
-        : toNumber(existingProject.availableLotAreaSqm);
-
   await prisma.projectLocation.update({
-    where: { id },
+    where: {
+      id,
+    },
+
     data: {
       projectName: data.projectName ?? existingProject.projectName,
+
       location: data.location ?? existingProject.location,
-      totalLotAreaSqm,
-      roadAreaSqm,
-      availableLotAreaSqm,
+
+      totalLotAreaSqm: data.totalLotAreaSqm ?? existingProject.totalLotAreaSqm,
+
       description:
         data.description !== undefined
           ? data.description || null
           : existingProject.description,
+
       status: data.status ?? existingProject.status,
     },
   });
@@ -165,21 +223,29 @@ async function updateProjectLocation(id, data) {
   return getProjectLocationById(id);
 }
 
-// The schema defines onDelete: Cascade from Lot -> ProjectLocation (and
-// LotQuotation -> Lot), so this intentionally cascades: deleting a project
-// also deletes its lots and their quotations. The frontend warns the user
-// with the current lot count before calling this, via getProjectLocationById.
+// The schema uses onDelete: Cascade from ProjectLocation -> Lot,
+// and Lot -> LotQuotation.
+//
+// Therefore deleting a project location also deletes its lots
+// and their quotations.
 async function deleteProjectLocation(id) {
   const existingProject = await prisma.projectLocation.findUnique({
-    where: { id },
+    where: {
+      id,
+    },
   });
+
   if (!existingProject) {
     const err = new Error("Project location not found");
     err.status = 404;
     throw err;
   }
 
-  await prisma.projectLocation.delete({ where: { id } });
+  await prisma.projectLocation.delete({
+    where: {
+      id,
+    },
+  });
 }
 
 export {

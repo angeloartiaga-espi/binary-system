@@ -29,8 +29,6 @@ const createEmptyForm = () => ({
   projectName: "",
   location: "",
   totalLotAreaSqm: "",
-  roadAreaSqm: "",
-  availableLotAreaSqm: "",
   description: "",
   status: "ACTIVE",
 });
@@ -44,11 +42,6 @@ const createFormFromProject = (project) => {
     projectName: project.projectName || "",
     location: project.location || "",
     totalLotAreaSqm: String(project.totalLotAreaSqm ?? ""),
-    roadAreaSqm: project.roadAreaSqm != null ? String(project.roadAreaSqm) : "",
-    availableLotAreaSqm:
-      project.availableLotAreaSqm != null
-        ? String(project.availableLotAreaSqm)
-        : "",
     description: project.description || "",
     status: project.status || "ACTIVE",
   };
@@ -69,63 +62,17 @@ export default function ProjectLocationFormModal({
     createFormFromProject(existingProject),
   );
 
-  const [availableTouched, setAvailableTouched] = useState(
-    Boolean(existingProject?.availableLotAreaSqm),
-  );
-
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // Handle all form changes
+  // Handle form changes
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    // If user manually changes available lot area,
-    // don't automatically calculate it anymore.
-    if (name === "availableLotAreaSqm") {
-      setAvailableTouched(true);
-
-      setForm((prev) => ({
-        ...prev,
-        availableLotAreaSqm: value,
-      }));
-
-      return;
-    }
-
-    setForm((prev) => {
-      const next = {
-        ...prev,
-        [name]: value,
-      };
-
-      // Automatically calculate:
-      // Available Lot Area = Total Lot Area - Road Area
-      if (
-        !availableTouched &&
-        (name === "totalLotAreaSqm" || name === "roadAreaSqm")
-      ) {
-        const total =
-          name === "totalLotAreaSqm"
-            ? Number(value)
-            : Number(prev.totalLotAreaSqm);
-
-        const road =
-          name === "roadAreaSqm"
-            ? Number(value) || 0
-            : Number(prev.roadAreaSqm) || 0;
-
-        if (Number.isFinite(total) && total >= 0) {
-          const available = total - road;
-
-          next.availableLotAreaSqm = available >= 0 ? String(available) : "0";
-        } else {
-          next.availableLotAreaSqm = "";
-        }
-      }
-
-      return next;
-    });
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   // Submit form
@@ -155,21 +102,10 @@ export default function ProjectLocationFormModal({
         return;
       }
 
-      // Make sure available area is not greater than total area
       const totalLotArea = Number(form.totalLotAreaSqm);
-      const roadArea = Number(form.roadAreaSqm) || 0;
-      const availableLotArea = Number(form.availableLotAreaSqm) || 0;
 
-      if (roadArea > totalLotArea) {
-        setError("Road area cannot be greater than the total lot area.");
-        setSaving(false);
-        return;
-      }
-
-      if (availableLotArea > totalLotArea) {
-        setError(
-          "Available lot area cannot be greater than the total lot area.",
-        );
+      if (!Number.isFinite(totalLotArea) || totalLotArea <= 0) {
+        setError("Total lot area must be greater than 0.");
         setSaving(false);
         return;
       }
@@ -178,8 +114,6 @@ export default function ProjectLocationFormModal({
         projectName: form.projectName.trim(),
         location: form.location.trim(),
         totalLotAreaSqm: form.totalLotAreaSqm,
-        roadAreaSqm: form.roadAreaSqm || undefined,
-        availableLotAreaSqm: form.availableLotAreaSqm || undefined,
         description: form.description.trim() || undefined,
         status: form.status,
       };
@@ -263,36 +197,6 @@ export default function ProjectLocationFormModal({
           required
         />
 
-        {/* Road Area */}
-        <FormInput
-          label="Road Area (sqm)"
-          name="roadAreaSqm"
-          type="number"
-          value={form.roadAreaSqm}
-          onChange={handleChange}
-          placeholder="Enter road area"
-          min="0"
-          step="0.01"
-        />
-
-        {/* Available Lot Area */}
-        <FormInput
-          label="Available Lot Area (sqm)"
-          name="availableLotAreaSqm"
-          type="number"
-          value={form.availableLotAreaSqm}
-          onChange={handleChange}
-          placeholder="Automatically calculated"
-          min="0"
-          step="0.01"
-        />
-
-        <p className="-mt-3 text-xs text-gray-500">
-          Available lot area is automatically calculated as:
-          <br />
-          <span className="font-medium">Total Lot Area − Road Area</span>
-        </p>
-
         {/* Status */}
         <FormSelect
           label="Status"
@@ -320,6 +224,30 @@ export default function ProjectLocationFormModal({
             rows={4}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#004369] focus:ring-1 focus:ring-[#004369]"
           />
+        </div>
+
+        {/* Inventory Information */}
+        <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+          <p className="text-sm font-medium text-gray-700">Lot Inventory</p>
+
+          <p className="mt-1 text-xs text-gray-500">
+            Cuts, Inc. Road and Available Cuts are automatically calculated
+            based on the status of the project's lots.
+          </p>
+
+          <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <span className="font-medium text-gray-700">Cuts, Inc. Road</span>
+
+              <p className="mt-1 text-gray-500">SOLD + HOLD + RESERVED</p>
+            </div>
+
+            <div>
+              <span className="font-medium text-gray-700">Available Cuts</span>
+
+              <p className="mt-1 text-gray-500">OPEN + RE_OPEN + RFO</p>
+            </div>
+          </div>
         </div>
 
         {/* Buttons */}

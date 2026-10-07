@@ -4,6 +4,7 @@ import usersReducer from "../features/users/usersSlice";
 import rolesReducer from "../features/roles/rolesSlice";
 import permissionsReducer from "../features/permissions/permissionsSlice";
 import projectLocationsReducer from "../features/projectLocations/projectLocationsSlice";
+import lotsReducer from "../features/lots/lotsSlice";
 
 export const store = configureStore({
   reducer: {
@@ -12,5 +13,6 @@ export const store = configureStore({
     roles: rolesReducer,
     permissions: permissionsReducer,
     projectLocations: projectLocationsReducer,
+    lots: lotsReducer,
   },
 });

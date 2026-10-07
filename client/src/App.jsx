@@ -21,6 +21,8 @@ import PermissionsList from "./pages/permissions/PermissionLists";
 import AssignPermission from "./pages/permissions/AssignPermission";
 import ProjectLocationsList from "./pages/project-locations/ProjectLocationList";
 
+import LotsList from "./pages/lots/LotsList";
+
 import { fetchMe } from "./features/auth/authSlice";
 
 export default function App() {
@@ -74,6 +76,10 @@ export default function App() {
           {/* Manage Properties */}
           <Route element={<RequirePermission permission="manage_properties" />}>
             <Route path="/properties" element={<ProjectLocationsList />} />
+            <Route
+              path="/properties/:projectLocationId/lots"
+              element={<LotsList />}
+            />
           </Route>
         </Route>
       </Route>

@@ -7,6 +7,7 @@ import errorHandler from "./middleware/errorHandler.js";
 import roleRoutes from "./modules/roles/role.routes.js";
 import permissionRoutes from "./modules/permissions/permission.routes.js";
 import projectLocationRoutes from "./modules/project-locations/projectLocation.routes.js";
+import lotRoutes from "./modules/lots/lot.routes.js";
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/permissions", permissionRoutes);
 app.use("/api/project-locations", projectLocationRoutes);
+app.use("/api/lots", lotRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });

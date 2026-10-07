@@ -45,6 +45,7 @@ enum LotStatus {
   RE_OPEN
   HOLD
   RESERVED
+  RFO
 }
 
 model User {
@@ -153,12 +154,6 @@ model ProjectLocation {
 
   // Total property/project area
   totalLotAreaSqm Decimal @db.Decimal(12, 2)
-
-  // Area allocated/deducted for roads
-  roadAreaSqm Decimal? @db.Decimal(12, 2)
-
-  // Remaining available/saleable area
-  availableLotAreaSqm Decimal? @db.Decimal(12, 2)
 
   description String?
 

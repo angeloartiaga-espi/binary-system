@@ -27,6 +27,14 @@ export const fetchProjectLocations = createAsyncThunk(
   },
 );
 
+export const fetchProjectLocationById = createAsyncThunk(
+  "projectLocations/fetchOne",
+  async (id) => {
+    const res = await api.get(`/project-locations/${id}`);
+    return res.data.data;
+  },
+);
+
 /*
 |--------------------------------------------------------------------------
 | CREATE PROJECT LOCATION
@@ -98,6 +106,7 @@ const initialState = {
   page: 1,
   totalPages: 1,
   status: "idle",
+  selectedProject: null,
   error: null,
 };
 
@@ -140,6 +149,10 @@ const projectLocationsSlice = createSlice({
         state.status = "failed";
 
         state.error = action.payload || "Failed to fetch project locations";
+      })
+
+      .addCase(fetchProjectLocationById.fulfilled, (state, action) => {
+        state.selectedProject = action.payload;
       })
 
       /*
