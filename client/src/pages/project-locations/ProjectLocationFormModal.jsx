@@ -10,32 +10,20 @@ import {
   updateProjectLocation,
 } from "../../features/projectLocations/projectLocationsSlice";
 
-const STATUS_OPTIONS = [
-  {
-    value: "ACTIVE",
-    label: "Active",
-  },
-  {
-    value: "INACTIVE",
-    label: "Inactive",
-  },
-  {
-    value: "COMPLETED",
-    label: "Completed",
-  },
-];
-
-const createEmptyForm = () => ({
-  projectName: "",
-  location: "",
-  totalLotAreaSqm: "",
-  description: "",
-  status: "ACTIVE",
-});
+const STATUS_OPTIONS = ["ACTIVE", "INACTIVE", "COMPLETED"].map((v) => ({
+  value: v,
+  label: v,
+}));
 
 const createFormFromProject = (project) => {
   if (!project) {
-    return createEmptyForm();
+    return {
+      projectName: "",
+      location: "",
+      totalLotAreaSqm: "",
+      description: "",
+      status: "ACTIVE",
+    };
   }
 
   return {
@@ -65,9 +53,14 @@ export default function ProjectLocationFormModal({
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  // Handle form changes
+  // ==========================================
+  // HANDLE CHANGE
+  // ==========================================
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    setError(null);
 
     setForm((prev) => ({
       ...prev,
@@ -75,7 +68,10 @@ export default function ProjectLocationFormModal({
     }));
   };
 
-  // Submit form
+  // ==========================================
+  // HANDLE SUBMIT
+  // ==========================================
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -83,22 +79,30 @@ export default function ProjectLocationFormModal({
     setSaving(true);
 
     try {
-      // Basic validation
+      // --------------------------------------
+      // PROJECT NAME
+      // --------------------------------------
+
       if (!form.projectName.trim()) {
         setError("Project name is required.");
-        setSaving(false);
         return;
       }
+
+      // --------------------------------------
+      // LOCATION
+      // --------------------------------------
 
       if (!form.location.trim()) {
         setError("Location is required.");
-        setSaving(false);
         return;
       }
 
+      // --------------------------------------
+      // TOTAL LOT AREA
+      // --------------------------------------
+
       if (!form.totalLotAreaSqm) {
         setError("Total lot area is required.");
-        setSaving(false);
         return;
       }
 
@@ -106,9 +110,12 @@ export default function ProjectLocationFormModal({
 
       if (!Number.isFinite(totalLotArea) || totalLotArea <= 0) {
         setError("Total lot area must be greater than 0.");
-        setSaving(false);
         return;
       }
+
+      // --------------------------------------
+      // PAYLOAD
+      // --------------------------------------
 
       const payload = {
         projectName: form.projectName.trim(),
@@ -117,6 +124,10 @@ export default function ProjectLocationFormModal({
         description: form.description.trim() || undefined,
         status: form.status,
       };
+
+      // --------------------------------------
+      // CREATE / UPDATE
+      // --------------------------------------
 
       let action;
 
@@ -131,6 +142,10 @@ export default function ProjectLocationFormModal({
         action = await dispatch(createProjectLocation(payload));
       }
 
+      // --------------------------------------
+      // ERROR
+      // --------------------------------------
+
       if (action.error) {
         setError(
           action.payload ||
@@ -140,6 +155,10 @@ export default function ProjectLocationFormModal({
 
         return;
       }
+
+      // --------------------------------------
+      // SUCCESS
+      // --------------------------------------
 
       onSaved();
     } catch (err) {
@@ -151,112 +170,94 @@ export default function ProjectLocationFormModal({
     }
   };
 
+  // ==========================================
+  // RENDER
+  // ==========================================
+
   return (
     <Modal
-      title={isEdit ? "Edit Project Location" : "Add Project Location"}
+      title={isEdit ? "Edit project location" : "Add new project location"}
       onClose={onClose}
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Error Message */}
-        {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-        {/* Project Name */}
-        <FormInput
-          label="Project Name"
-          name="projectName"
-          value={form.projectName}
-          onChange={handleChange}
-          placeholder="Enter project name"
-          required
-        />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* PROJECT NAME + LOCATION */}
 
-        {/* Location */}
-        <FormInput
-          label="Location"
-          name="location"
-          value={form.location}
-          onChange={handleChange}
-          placeholder="Enter project location"
-          required
-        />
-
-        {/* Total Lot Area */}
-        <FormInput
-          label="Total Lot Area (sqm)"
-          name="totalLotAreaSqm"
-          type="number"
-          value={form.totalLotAreaSqm}
-          onChange={handleChange}
-          placeholder="Enter total lot area"
-          min="0"
-          step="0.01"
-          required
-        />
-
-        {/* Status */}
-        <FormSelect
-          label="Status"
-          name="status"
-          value={form.status}
-          onChange={handleChange}
-          options={STATUS_OPTIONS}
-        />
-
-        {/* Description */}
-        <div>
-          <label
-            htmlFor="description"
-            className="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Description
-          </label>
-
-          <textarea
-            id="description"
-            name="description"
-            value={form.description}
+        <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-4">
+          <FormInput
+            label="Project name"
+            name="projectName"
+            value={form.projectName}
             onChange={handleChange}
-            placeholder="Enter project description"
-            rows={4}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-[#004369] focus:ring-1 focus:ring-[#004369]"
+            placeholder="Enter project name"
+            required
+          />
+
+          <FormInput
+            label="Location"
+            name="location"
+            value={form.location}
+            onChange={handleChange}
+            placeholder="Enter project location"
+            required
           />
         </div>
 
-        {/* Inventory Information */}
-        <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-          <p className="text-sm font-medium text-gray-700">Lot Inventory</p>
+        {/* TOTAL AREA + STATUS */}
 
-          <p className="mt-1 text-xs text-gray-500">
-            Cuts, Inc. Road and Available Cuts are automatically calculated
-            based on the status of the project's lots.
-          </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-4">
+          <FormInput
+            label="Total lot area (sqm)"
+            type="number"
+            step="0.01"
+            min="0"
+            name="totalLotAreaSqm"
+            value={form.totalLotAreaSqm}
+            onChange={handleChange}
+            placeholder="Enter total lot area"
+            required
+          />
 
-          <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-            <div>
-              <span className="font-medium text-gray-700">Cuts, Inc. Road</span>
-
-              <p className="mt-1 text-gray-500">SOLD + HOLD + RESERVED</p>
-            </div>
-
-            <div>
-              <span className="font-medium text-gray-700">Available Cuts</span>
-
-              <p className="mt-1 text-gray-500">OPEN + RE_OPEN + RFO</p>
-            </div>
-          </div>
+          <FormSelect
+            label="Status"
+            name="status"
+            value={form.status}
+            onChange={handleChange}
+            options={STATUS_OPTIONS}
+            placeholder={null}
+          />
         </div>
 
-        {/* Buttons */}
-        <div className="flex justify-end gap-3 border-t pt-4">
+        {/* DESCRIPTION */}
+
+        <FormInput
+          label="Description (optional)"
+          name="description"
+          value={form.description}
+          onChange={handleChange}
+          placeholder="Enter project description"
+        />
+
+        {/* INFORMATION */}
+
+        <p className="text-xs text-gray-500">
+          Cuts, Inc. Road and Available Cuts are counted automatically from this
+          project's lots.
+        </p>
+
+        {/* BUTTONS */}
+
+        <div className="flex gap-3 border-t pt-4">
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex-1 rounded-md border border-gray-300 px-4 py-2.5 font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel
           </button>
@@ -264,13 +265,9 @@ export default function ProjectLocationFormModal({
           <button
             type="submit"
             disabled={saving}
-            className="rounded-lg bg-[#004369] px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex-1 rounded-md bg-[#004369] px-4 py-2.5 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saving
-              ? "Saving..."
-              : isEdit
-                ? "Update Project"
-                : "Create Project"}
+            {saving ? "Saving..." : isEdit ? "Save changes" : "Create project"}
           </button>
         </div>
       </form>

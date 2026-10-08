@@ -8,6 +8,7 @@ import roleRoutes from "./modules/roles/role.routes.js";
 import permissionRoutes from "./modules/permissions/permission.routes.js";
 import projectLocationRoutes from "./modules/project-locations/projectLocation.routes.js";
 import lotRoutes from "./modules/lots/lot.routes.js";
+import lotQuotationRoutes from "./modules/lot-quotations/lotQuotation.routes.js";
 
 const app = express();
 
@@ -25,7 +26,7 @@ app.use("/api/roles", roleRoutes);
 app.use("/api/permissions", permissionRoutes);
 app.use("/api/project-locations", projectLocationRoutes);
 app.use("/api/lots", lotRoutes);
-
+app.use("/api/lot-quotations", lotQuotationRoutes);
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });

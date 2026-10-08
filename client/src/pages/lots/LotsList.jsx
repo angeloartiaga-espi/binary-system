@@ -111,6 +111,12 @@ export default function LotsList() {
                 <td className="p-3 text-gray-500">{lot.remarks || "—"}</td>
                 <td className="p-3">{lot.quotationCount ?? 0}</td>
                 <td className="p-3 space-x-3 whitespace-nowrap">
+                  <Link
+                    to={`/lots/${lot.id}/quotations`}
+                    className="text-brand-dark font-medium hover:underline"
+                  >
+                    View
+                  </Link>
                   <button
                     onClick={() => setFormModalLot(lot)}
                     className="text-brand-dark font-medium"

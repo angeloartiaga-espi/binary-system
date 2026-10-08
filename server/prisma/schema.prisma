@@ -211,9 +211,8 @@ model LotQuotation {
   // Proposed house/floor area
   floorAreaSqm Decimal @db.Decimal(10, 2)
 
-  // Pricing
-  totalPrice    Decimal @db.Decimal(15, 2)
-  contractPrice Decimal @db.Decimal(15, 2)
+   // Pricing
+  totalContractPrice Decimal @db.Decimal(15, 2)
 
   // Payment
   downpayment Decimal @db.Decimal(15, 2)

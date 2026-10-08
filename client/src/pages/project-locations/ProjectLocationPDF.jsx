@@ -107,10 +107,7 @@ const styles = StyleSheet.create({
             {" "}
             Estate Site Properties Inc.{" "}
           </Text>{" "}
-          <Text style={styles.reportTitle}>
-            {" "}
-            Project Locations Report{" "}
-          </Text>{" "}
+          <Text style={styles.reportTitle}> Inventory Report </Text>{" "}
           <Text style={styles.reportDate}>
             {" "}
             Generated on: {getReportDate()}{" "}

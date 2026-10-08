@@ -23,6 +23,8 @@ import ProjectLocationsList from "./pages/project-locations/ProjectLocationList"
 
 import LotsList from "./pages/lots/LotsList";
 
+import LotQuotationList from "./pages/lot-quotations/LotQuotationList";
+
 import { fetchMe } from "./features/auth/authSlice";
 
 export default function App() {
@@ -79,6 +81,10 @@ export default function App() {
             <Route
               path="/properties/:projectLocationId/lots"
               element={<LotsList />}
+            />
+            <Route
+              path="/lots/:lotId/quotations"
+              element={<LotQuotationList />}
             />
           </Route>
         </Route>

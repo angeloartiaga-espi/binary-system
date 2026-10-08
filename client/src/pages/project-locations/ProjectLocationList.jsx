@@ -40,7 +40,7 @@ export default function ProjectLocationsList() {
         {" "}
         <h1 className="font-serif text-2xl text-brand-dark">
           {" "}
-          Project Locations{" "}
+          Inventories/Location
         </h1>{" "}
         <div className="flex flex-wrap gap-2">
           <PDFDownloadLink
@@ -81,12 +81,14 @@ export default function ProjectLocationsList() {
             {" "}
             <tr>
               {" "}
-              <th className="p-3">Project</th> <th className="p-3">Location</th>{" "}
-              <th className="p-3">Total (sqm)</th>{" "}
-              <th className="p-3">Cuts, Inc. Road</th>{" "}
-              <th className="p-3">Available Cuts</th>{" "}
-              <th className="p-3">Lots</th> <th className="p-3">Status</th>{" "}
-              <th className="p-3">Actions</th>{" "}
+              <th className="p-3">Inventory</th>
+              <th className="p-3">Location</th>
+              <th className="p-3">Total (sqm)</th>
+              <th className="p-3 text-center">Cuts</th>
+              <th className="p-3 text-center">Inc. Road</th>
+              <th className="p-3 text-center">Available Cuts</th>
+              <th className="p-3">Status</th>
+              <th className="p-3">Actions</th>
             </tr>{" "}
           </thead>{" "}
           <tbody>
@@ -119,14 +121,12 @@ export default function ProjectLocationsList() {
                 <td className="p-3 font-medium"> {project.projectName} </td>{" "}
                 {/* Location */} <td className="p-3"> {project.location} </td>{" "}
                 {/* Total Project Area */}{" "}
-                <td className="p-3"> {numberFmt(project.totalLotAreaSqm)} </td>{" "}
-                {/* Cuts, Inc. Road */}{" "}
-                <td className="p-3"> {project.cutsIncRoad ?? 0} </td>{" "}
-                {/* Available Cuts */}{" "}
-                <td className="p-3"> {project.availableCuts ?? 0} </td>{" "}
-                {/* Total Lots */}{" "}
-                <td className="p-3"> {project.lotCount ?? 0} </td>{" "}
-                {/* Status */}{" "}
+                <td className="p-3">{numberFmt(project.totalLotAreaSqm)}</td>
+                <td className="p-3 text-center font-medium">{project.cuts}</td>
+                <td className="p-3 text-center">{project.incRoad}</td>
+                <td className="p-3 text-center text-green-700 font-medium">
+                  {project.availableCuts}
+                </td>
                 <td className="p-3">
                   {" "}
                   <ProjectStatusBadge status={project.status} />{" "}

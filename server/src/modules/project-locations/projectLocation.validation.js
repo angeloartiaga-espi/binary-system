@@ -1,9 +1,7 @@
 import { body, query } from "express-validator";
 
-const STATUSES = ["ACTIVE", "INACTIVE", "COMPLETED"];
+const STATUSES = ["OPEN", "SOLD", "RE_OPEN", "HOLD", "RESERVED", "RFO"];
 
-// Decimal fields arrive as strings/numbers from JSON — isFloat accepts
-// either, and toFloat() normalizes the value before it reaches the service.
 const createValidation = [
   body("projectName").trim().notEmpty().withMessage("Project name is required"),
   body("location").trim().notEmpty().withMessage("Location is required"),
@@ -15,44 +13,15 @@ const createValidation = [
     .withMessage("Total lot area must be a positive number")
     .toFloat(),
 
-  body("roadAreaSqm")
-    .optional({ checkFalsy: true })
-    .isFloat({ min: 0 })
-    .withMessage("Road area must be a positive number")
-    .toFloat(),
-
-  // Optional — if omitted, the service derives it as totalLotAreaSqm - roadAreaSqm.
-  body("availableLotAreaSqm")
-    .optional({ checkFalsy: true })
-    .isFloat({ min: 0 })
-    .withMessage("Available lot area must be a positive number")
-    .toFloat(),
-
   body("description").optional({ checkFalsy: true }).isString(),
 
   body("status")
     .optional({ checkFalsy: true })
     .isIn(STATUSES)
     .withMessage(`Status must be one of: ${STATUSES.join(", ")}`),
-
-  // Cross-field check: road + available can't exceed the total.
-  body().custom((data) => {
-    const total = Number(data.totalLotAreaSqm);
-    const road = data.roadAreaSqm ? Number(data.roadAreaSqm) : 0;
-    const available = data.availableLotAreaSqm
-      ? Number(data.availableLotAreaSqm)
-      : null;
-
-    if (road > total)
-      throw new Error("Road area cannot exceed the total lot area");
-    if (available !== null && available > total) {
-      throw new Error("Available lot area cannot exceed the total lot area");
-    }
-    return true;
-  }),
 ];
 
-// Same rules, every field optional (PUT behaves like a partial update here).
+// Same rules, every field optional.
 const updateValidation = [
   body("projectName")
     .optional()
@@ -64,14 +33,10 @@ const updateValidation = [
     .trim()
     .notEmpty()
     .withMessage("Location cannot be empty"),
-  body("totalLotAreaSqm").optional().isFloat({ min: 0 }).toFloat(),
-  body("roadAreaSqm")
-    .optional({ checkFalsy: true })
+  body("totalLotAreaSqm")
+    .optional()
     .isFloat({ min: 0 })
-    .toFloat(),
-  body("availableLotAreaSqm")
-    .optional({ checkFalsy: true })
-    .isFloat({ min: 0 })
+    .withMessage("Total lot area must be a positive number")
     .toFloat(),
   body("description").optional({ checkFalsy: true }).isString(),
   body("status")
