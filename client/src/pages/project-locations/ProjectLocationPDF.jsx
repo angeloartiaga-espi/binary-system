@@ -1,220 +1,277 @@
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
-const styles = StyleSheet.create({
+import {
+  Document,
+  Page,
+  View,
+  Text,
+  Image,
+  StyleSheet,
+} from "@react-pdf/renderer";
+
+import espiLogo from "../../assets/espilogo-transparent.png";
+
+const C = {
+  titleBar: "#FFF0B8",
+  headerCell: "#F4B79A",
+  rowGreen: "#C9E0B5",
+  cutsBlue: "#BFD6EA",
+  total: "#F5B82E",
+  border: "#526B7A",
+  text: "#123A4A",
+};
+
+const s = StyleSheet.create({
   page: {
-    padding: 30,
-    paddingBottom: 45,
-    fontSize: 9,
+    paddingTop: 28,
+    paddingHorizontal: 40,
+    paddingBottom: 35,
     fontFamily: "Helvetica",
+    color: C.text,
+    fontSize: 9,
+    borderWidth: 2,
+    borderColor: "#004369",
   },
-  /* ========================= HEADER ========================= */ header: {
-    marginBottom: 20,
-  },
-  companyName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#004369",
-    marginBottom: 4,
-  },
-  reportTitle: { fontSize: 13, fontWeight: "bold", marginBottom: 4 },
-  reportDate: { fontSize: 8, color: "#666666" },
-  /* ========================= TABLE ========================= */ table: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#CCCCCC",
-  },
-  tableHeader: { flexDirection: "row", backgroundColor: "#004369" },
-  tableRow: {
+  topBar: {
     flexDirection: "row",
-    borderTopWidth: 1,
-    borderTopColor: "#DDDDDD",
-    minHeight: 28,
+    alignItems: "center",
+    backgroundColor: C.titleBar,
+    padding: 8,
+    minHeight: 65,
+    borderWidth: 1.5,
+    borderColor: "#004369",
+  },
+
+  logoBox: {
+    width: 100,
+    height: 55,
+    justifyContent: "center",
     alignItems: "center",
   },
-  tableRowAlt: { backgroundColor: "#F7F9FA" },
-  /* ========================= CELLS ========================= */ cell: {
-    paddingVertical: 6,
-    paddingHorizontal: 5,
-    borderRightWidth: 1,
-    borderRightColor: "#DDDDDD",
+
+  logoImg: {
+    width: 95,
+    height: 52,
+    objectFit: "contain",
   },
-  headerCell: {
-    paddingVertical: 7,
-    paddingHorizontal: 5,
-    borderRightWidth: 1,
-    borderRightColor: "#FFFFFF",
-    color: "#FFFFFF",
+
+  logoText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#3E7B2A",
+  },
+
+  title: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: 15,
     fontWeight: "bold",
   },
-  /* ========================= COLUMN WIDTHS TOTAL = 100% ========================= */ project:
-    { width: "18%" },
-  location: { width: "22%" },
-  totalArea: { width: "15%", textAlign: "right" },
-  cuts: { width: "14%", textAlign: "center" },
-  available: { width: "14%", textAlign: "center" },
-  lots: { width: "8%", textAlign: "center" },
-  status: { width: "9%", textAlign: "center", borderRightWidth: 0 },
-  /* ========================= EMPTY STATE ========================= */ emptyCell:
-    {
-      width: "100%",
-      textAlign: "center",
-      padding: 12,
-      color: "#666666",
-      borderRightWidth: 0,
-    },
-  /* ========================= FOOTER ========================= */ footer: {
-    position: "absolute",
-    bottom: 20,
-    left: 30,
-    right: 30,
-    textAlign: "center",
+
+  asOf: {
+    width: 130,
+    textAlign: "right",
     fontSize: 8,
-    color: "#777777",
+  },
+
+  table: {
+    width: "100%",
+    borderWidth: 1.5,
+    borderColor: "#004369",
+  },
+
+  row: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderColor: C.border,
+    minHeight: 25,
+  },
+
+  cell: {
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 5,
+    borderLeftWidth: 1,
+    borderColor: C.border,
+  },
+
+  cellText: {
+    fontSize: 8.5,
+  },
+
+  headerCell: {
+    backgroundColor: C.headerCell,
+    minHeight: 30,
+    borderBottomWidth: 1.5,
+    borderColor: "#004369",
+  },
+
+  headText: {
+    fontSize: 8.5,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+
+  center: {
+    textAlign: "center",
+  },
+
+  // Three columns only
+  project: {
+    width: "55%",
+  },
+
+  totalArea: {
+    width: "22.5%",
+  },
+
+  available: {
+    width: "22.5%",
+  },
+
+  totalRow: {
+    flexDirection: "row",
+    backgroundColor: C.total,
+    minHeight: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    borderWidth: 1.5,
+    borderColor: "#004369",
+  },
+
+  totalLabel: {
+    fontSize: 10,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+
+  emptyCell: {
+    width: "100%",
+    textAlign: "center",
+    padding: 12,
+    color: "#666666",
+    fontSize: 9,
   },
 });
-/* ========================= NUMBER FORMAT ========================= */ const numberFmt =
-  (value) =>
-    value == null
-      ? "—"
-      : Number(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
-/* ========================= REPORT DATE ========================= */ const getReportDate =
-  () => {
-    return new Date().toLocaleDateString("en-PH", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-/* ========================= STATUS ========================= */ const formatStatus =
-  (status) => {
-    if (!status) return "—";
-    return status
-      .replace(/_/g, " ")
-      .toLowerCase()
-      .replace(/\b\w/g, (letter) => letter.toUpperCase());
-  };
-/* ========================= PDF COMPONENT ========================= */ export default function ProjectLocationsPDF({
+
+const numberFmt = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
+  const number = Number(value);
+
+  return Number.isFinite(number)
+    ? number.toLocaleString("en-PH", {
+        maximumFractionDigits: 2,
+      })
+    : "—";
+};
+
+const getReportDate = () =>
+  new Date().toLocaleDateString("en-PH", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+export default function ProjectLocationsPDF({
   projects = [],
+  logo = espiLogo,
+  title = "PRODUCT INVENTORY",
 }) {
+  // Sum available cuts across the supplied projects.
+  const totalLotsAvailable = projects.reduce((sum, project) => {
+    const value = Number(project.availableCuts);
+    return sum + (Number.isFinite(value) ? value : 0);
+  }, 0);
+
   return (
-    <Document>
-      {" "}
-      <Page size="A4" orientation="landscape" style={styles.page}>
-        {" "}
-        {/* ========================= HEADER ========================= */}{" "}
-        <View style={styles.header}>
-          {" "}
-          <Text style={styles.companyName}>
-            {" "}
-            Estate Site Properties Inc.{" "}
-          </Text>{" "}
-          <Text style={styles.reportTitle}> Inventory Report </Text>{" "}
-          <Text style={styles.reportDate}>
-            {" "}
-            Generated on: {getReportDate()}{" "}
-          </Text>{" "}
-        </View>{" "}
-        {/* ========================= TABLE ========================= */}{" "}
-        <View style={styles.table}>
-          {" "}
-          {/* TABLE HEADER */}{" "}
-          <View style={styles.tableHeader}>
-            {" "}
-            <Text style={[styles.cell, styles.headerCell, styles.project]}>
-              {" "}
-              PROJECT{" "}
-            </Text>{" "}
-            <Text style={[styles.cell, styles.headerCell, styles.location]}>
-              {" "}
-              LOCATION{" "}
-            </Text>{" "}
-            <Text style={[styles.cell, styles.headerCell, styles.totalArea]}>
-              {" "}
-              TOTAL AREA (SQM){" "}
-            </Text>{" "}
-            <Text style={[styles.cell, styles.headerCell, styles.cuts]}>
-              {" "}
-              CUTS, INC. ROAD{" "}
-            </Text>{" "}
-            <Text style={[styles.cell, styles.headerCell, styles.available]}>
-              {" "}
-              AVAILABLE CUTS{" "}
-            </Text>{" "}
-            <Text style={[styles.cell, styles.headerCell, styles.lots]}>
-              {" "}
-              LOTS{" "}
-            </Text>{" "}
-            <Text style={[styles.cell, styles.headerCell, styles.status]}>
-              {" "}
-              STATUS{" "}
-            </Text>{" "}
-          </View>{" "}
-          {/* TABLE ROWS */}{" "}
+    <Document title={title} author="Estate Site Properties Inc.">
+      <Page size="A4" orientation="landscape" style={s.page}>
+        {/* HEADER */}
+        <View style={s.topBar}>
+          <View style={s.logoBox}>
+            {logo ? (
+              <Image src={logo} style={s.logoImg} />
+            ) : (
+              <Text style={s.logoText}>ESPI</Text>
+            )}
+          </View>
+
+          <Text style={s.title}>{title}</Text>
+
+          <Text style={s.asOf}>
+            AS OF{"\n"}
+            {getReportDate()}
+          </Text>
+        </View>
+
+        {/* TABLE */}
+        <View style={s.table}>
+          {/* TABLE HEADER */}
+          <View style={[s.row, s.headerCell]} wrap={false}>
+            <View style={[s.cell, s.project, { borderLeftWidth: 0 }]}>
+              <Text style={s.headText}>PROJECT</Text>
+            </View>
+
+            <View style={[s.cell, s.totalArea]}>
+              <Text style={s.headText}>TOTAL AREA (SQM)</Text>
+            </View>
+
+            <View style={[s.cell, s.available]}>
+              <Text style={s.headText}>AVAILABLE CUTS</Text>
+            </View>
+          </View>
+
+          {/* PROJECT ROWS */}
           {projects.map((project, index) => (
-            <View
-              key={project.id || index}
-              style={[
-                styles.tableRow,
-                index % 2 === 1 ? styles.tableRowAlt : {},
-              ]}
-            >
-              {" "}
-              {/* PROJECT */}{" "}
-              <Text style={[styles.cell, styles.project]}>
-                {" "}
-                {project.projectName || "—"}{" "}
-              </Text>{" "}
-              {/* LOCATION */}{" "}
-              <Text style={[styles.cell, styles.location]}>
-                {" "}
-                {project.location || "—"}{" "}
-              </Text>{" "}
-              {/* TOTAL AREA */}{" "}
-              <Text style={[styles.cell, styles.totalArea]}>
-                {" "}
-                {numberFmt(project.totalLotAreaSqm)}{" "}
-              </Text>{" "}
-              {/* CUTS, INCLUDING ROAD */}{" "}
-              <Text style={[styles.cell, styles.cuts]}>
-                {" "}
-                {project.cutsIncRoad ?? 0}{" "}
-              </Text>{" "}
-              {/* AVAILABLE CUTS */}{" "}
-              <Text style={[styles.cell, styles.available]}>
-                {" "}
-                {project.availableCuts ?? 0}{" "}
-              </Text>{" "}
-              {/* LOTS */}{" "}
-              <Text style={[styles.cell, styles.lots]}>
-                {" "}
-                {project.lotCount ?? 0}{" "}
-              </Text>{" "}
-              {/* STATUS */}{" "}
-              <Text style={[styles.cell, styles.status]}>
-                {" "}
-                {formatStatus(project.status)}{" "}
-              </Text>{" "}
+            <View key={project.id || index} style={s.row} wrap={false}>
+              <View
+                style={[
+                  s.cell,
+                  s.project,
+                  {
+                    backgroundColor: C.rowGreen,
+                    borderLeftWidth: 0,
+                  },
+                ]}
+              >
+                <Text style={s.cellText}>
+                  {(project.projectName || "—").toUpperCase()}
+                </Text>
+              </View>
+
+              <View style={[s.cell, s.totalArea]}>
+                <Text style={[s.cellText, s.center]}>
+                  {numberFmt(project.totalLotAreaSqm)}
+                </Text>
+              </View>
+
+              <View
+                style={[s.cell, s.available, { backgroundColor: C.cutsBlue }]}
+              >
+                <Text style={[s.cellText, s.center]}>
+                  {numberFmt(project.availableCuts)}
+                </Text>
+              </View>
             </View>
-          ))}{" "}
-          {/* EMPTY STATE */}{" "}
+          ))}
+
+          {/* EMPTY STATE */}
           {projects.length === 0 && (
-            <View style={styles.tableRow}>
-              {" "}
-              <Text style={styles.emptyCell}>
-                {" "}
-                No project locations available.{" "}
-              </Text>{" "}
+            <View style={s.row} wrap={false}>
+              <Text style={s.emptyCell}>No project locations available.</Text>
             </View>
-          )}{" "}
-        </View>{" "}
-        {/* ========================= FOOTER ========================= */}{" "}
-        <Text
-          style={styles.footer}
-          fixed
-          render={({ pageNumber, totalPages }) =>
-            `ESPI PORTAL • Project Locations • Page ${pageNumber} of ${totalPages}`
-          }
-        />{" "}
-      </Page>{" "}
+          )}
+        </View>
+
+        {/* TOTAL LOTS AVAILABLE ONLY */}
+        <View style={s.totalRow} wrap={false}>
+          <Text style={s.totalLabel}>
+            TOTAL LOTS AVAILABLE: {numberFmt(totalLotsAvailable)} LOTS
+          </Text>
+        </View>
+      </Page>
     </Document>
   );
 }

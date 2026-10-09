@@ -15,6 +15,11 @@ const STATUS_OPTIONS = ["ACTIVE", "INACTIVE", "COMPLETED"].map((v) => ({
   label: v,
 }));
 
+const LOCATION_OPTIONS = [
+  { value: "Baguio", label: "Baguio" },
+  { value: "La Union", label: "La Union" },
+];
+
 const createFormFromProject = (project) => {
   if (!project) {
     return {
@@ -198,12 +203,13 @@ export default function ProjectLocationFormModal({
             required
           />
 
-          <FormInput
+          <FormSelect
             label="Location"
             name="location"
             value={form.location}
             onChange={handleChange}
-            placeholder="Enter project location"
+            options={LOCATION_OPTIONS}
+            placeholder="Select location"
             required
           />
         </div>
