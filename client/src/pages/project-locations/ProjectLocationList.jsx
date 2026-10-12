@@ -23,9 +23,11 @@ export default function ProjectLocationsList() {
   const [formModalProject, setFormModalProject] = useState(undefined);
   const [projectToDelete, setProjectToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     dispatch(fetchProjectLocations({ page: 1, search }));
   }, [dispatch, search]);
+
   const refresh = () => dispatch(fetchProjectLocations({ page: 1, search }));
   const handleConfirmDelete = async () => {
     setDeleting(true);
@@ -35,13 +37,10 @@ export default function ProjectLocationsList() {
   };
   return (
     <div className="p-8">
-      {" "}
       <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
-        {" "}
         <h1 className="font-serif text-2xl text-brand-dark">
-          {" "}
           Inventories/Location
-        </h1>{" "}
+        </h1>
         <div className="flex flex-wrap gap-2">
           <PDFDownloadLink
             document={<ProjectLocationsPDF projects={list} />}
@@ -65,108 +64,92 @@ export default function ProjectLocationsList() {
           </button>
         </div>
       </div>
-      {/* Search */}{" "}
+      {/* Search */}
       <input
         placeholder="Search by project name or location"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="mb-4 w-full max-w-sm rounded-md border border-gray-300 px-3 py-2"
-      />{" "}
-      {/* Table */}{" "}
+      />
+      {/* Table */}
       <div className="bg-white rounded-lg overflow-x-auto shadow-sm">
-        {" "}
         <table className="w-full text-left">
-          {" "}
           <thead className="border-b text-gray-500 text-sm">
-            {" "}
             <tr>
-              {" "}
               <th className="p-3">Inventory</th>
               <th className="p-3">Location</th>
               <th className="p-3">Total (sqm)</th>
-              <th className="p-3 text-center">Cuts</th>
-              <th className="p-3 text-center">Inc. Road</th>
+              <th className="p-3 text-center">Cuts, Inc. Road</th>
               <th className="p-3 text-center">Available Cuts</th>
               <th className="p-3">Status</th>
               <th className="p-3">Actions</th>
-            </tr>{" "}
-          </thead>{" "}
+            </tr>
+          </thead>
           <tbody>
-            {" "}
-            {/* Loading */}{" "}
+            {/* Loading */}
             {status === "loading" && (
               <tr>
-                {" "}
                 <td className="p-3" colSpan={8}>
-                  {" "}
-                  Loading...{" "}
-                </td>{" "}
+                  Loading...
+                </td>
               </tr>
-            )}{" "}
-            {/* Empty */}{" "}
+            )}
+            {/* Empty */}
             {status !== "loading" && list.length === 0 && (
               <tr>
-                {" "}
                 <td className="p-3 text-gray-500" colSpan={8}>
-                  {" "}
-                  No project locations yet.{" "}
-                </td>{" "}
+                  No project locations yet.
+                </td>
               </tr>
-            )}{" "}
-            {/* Projects */}{" "}
+            )}
+            {/* Projects */}
             {list.map((project) => (
               <tr key={project.id} className="border-b last:border-0">
-                {" "}
-                {/* Project */}{" "}
-                <td className="p-3 font-medium"> {project.projectName} </td>{" "}
-                {/* Location */} <td className="p-3"> {project.location} </td>{" "}
-                {/* Total Project Area */}{" "}
+                {/* Project */}
+                <td className="p-3 font-medium"> {project.projectName} </td>
+                {/* Location */} <td className="p-3"> {project.location} </td>
+                {/* Total Project Area */}
                 <td className="p-3">{numberFmt(project.totalLotAreaSqm)}</td>
-                <td className="p-3 text-center font-medium">{project.cuts}</td>
-                <td className="p-3 text-center">{project.incRoad}</td>
+                <td className="p-3 text-center font-medium">
+                  {project.cuts + project.incRoad}
+                </td>
                 <td className="p-3 text-center text-green-700 font-medium">
                   {project.availableCuts}
                 </td>
                 <td className="p-3">
-                  {" "}
-                  <ProjectStatusBadge status={project.status} />{" "}
-                </td>{" "}
-                {/* Actions */}{" "}
+                  <ProjectStatusBadge status={project.status} />
+                </td>
+                {/* Actions */}
                 <td className="p-3 space-x-3 whitespace-nowrap">
-                  {" "}
                   <Link
                     to={`/properties/${project.id}/lots`}
                     className="text-brand-dark font-medium"
                   >
-                    {" "}
-                    View{" "}
-                  </Link>{" "}
+                    View
+                  </Link>
                   <button
                     onClick={() => setFormModalProject(project)}
                     className="text-brand-dark font-medium"
                   >
-                    {" "}
-                    Edit{" "}
-                  </button>{" "}
+                    Edit
+                  </button>
                   <button
                     onClick={() => setProjectToDelete(project)}
                     className="text-red-600 font-medium"
                   >
-                    {" "}
-                    Delete{" "}
-                  </button>{" "}
-                </td>{" "}
+                    Delete
+                  </button>
+                </td>
               </tr>
-            ))}{" "}
-          </tbody>{" "}
-        </table>{" "}
-      </div>{" "}
-      {/* Pagination */}{" "}
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {/* Pagination */}
       <p className="text-sm text-gray-500 mt-3">
-        {" "}
-        Page {page} of {totalPages}{" "}
-      </p>{" "}
-      {/* Add/Edit Modal */}{" "}
+        Page {page} of {totalPages}
+      </p>
+      {/* Add/Edit Modal */}
       {formModalProject !== undefined && (
         <ProjectLocationFormModal
           existingProject={formModalProject}
@@ -176,8 +159,8 @@ export default function ProjectLocationsList() {
             refresh();
           }}
         />
-      )}{" "}
-      {/* Delete Confirmation */}{" "}
+      )}
+      {/* Delete Confirmation */}
       {projectToDelete && (
         <ConfirmDialog
           title="Delete project location"
@@ -191,7 +174,7 @@ export default function ProjectLocationsList() {
           onCancel={() => setProjectToDelete(null)}
           loading={deleting}
         />
-      )}{" "}
+      )}
     </div>
   );
 }

@@ -114,19 +114,22 @@ const s = StyleSheet.create({
     textAlign: "center",
   },
 
-  // Three columns only
+  // Four columns
   project: {
-    width: "55%",
+    width: "40%",
   },
 
   totalArea: {
-    width: "22.5%",
+    width: "20%",
+  },
+
+  cutsIncRoad: {
+    width: "20%",
   },
 
   available: {
-    width: "22.5%",
+    width: "20%",
   },
-
   totalRow: {
     flexDirection: "row",
     backgroundColor: C.total,
@@ -211,11 +214,15 @@ export default function ProjectLocationsPDF({
           {/* TABLE HEADER */}
           <View style={[s.row, s.headerCell]} wrap={false}>
             <View style={[s.cell, s.project, { borderLeftWidth: 0 }]}>
-              <Text style={s.headText}>PROJECT</Text>
+              <Text style={s.headText}>INVENTORIES/LOCATION</Text>
             </View>
 
             <View style={[s.cell, s.totalArea]}>
-              <Text style={s.headText}>TOTAL AREA (SQM)</Text>
+              <Text style={s.headText}>LOT AREA (SQM)</Text>
+            </View>
+
+            <View style={[s.cell, s.cutsIncRoad]}>
+              <Text style={s.headText}>CUTS, INC. ROAD</Text>
             </View>
 
             <View style={[s.cell, s.available]}>
@@ -226,6 +233,7 @@ export default function ProjectLocationsPDF({
           {/* PROJECT ROWS */}
           {projects.map((project, index) => (
             <View key={project.id || index} style={s.row} wrap={false}>
+              {/* PROJECT NAME */}
               <View
                 style={[
                   s.cell,
@@ -237,16 +245,29 @@ export default function ProjectLocationsPDF({
                 ]}
               >
                 <Text style={s.cellText}>
-                  {(project.projectName || "—").toUpperCase()}
+                  {`${index + 1}. ${(project.projectName || "—").toUpperCase()}`}
                 </Text>
               </View>
 
+              {/* LOT AREA */}
               <View style={[s.cell, s.totalArea]}>
                 <Text style={[s.cellText, s.center]}>
                   {numberFmt(project.totalLotAreaSqm)}
                 </Text>
               </View>
 
+              {/* CUTS, INC. ROAD */}
+              <View
+                style={[s.cell, s.cutsIncRoad, { backgroundColor: C.cutsBlue }]}
+              >
+                <Text style={[s.cellText, s.center]}>
+                  {numberFmt(
+                    Number(project.cuts ?? 0) + Number(project.incRoad ?? 0),
+                  )}
+                </Text>
+              </View>
+
+              {/* AVAILABLE CUTS */}
               <View
                 style={[s.cell, s.available, { backgroundColor: C.cutsBlue }]}
               >

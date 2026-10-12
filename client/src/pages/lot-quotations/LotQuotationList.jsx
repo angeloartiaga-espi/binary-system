@@ -7,6 +7,8 @@ import {
   deleteLotQuotation,
 } from "../../features/lotQuotations/lotQuotationsSlice";
 
+import { fetchLotById } from "../../features/lots/lotsSlice";
+
 import LotQuotationModal from "./LotQuotationModal";
 import ConfirmDialog from "../../components/ConfirmDialog";
 
@@ -44,6 +46,17 @@ export default function LotQuotationList() {
   const [quotationToDelete, setQuotationToDelete] = useState(null);
 
   const [deleting, setDeleting] = useState(false);
+
+  const [lot, setLot] = useState(null);
+
+  useEffect(() => {
+    if (lotId) {
+      dispatch(fetchLotById(lotId))
+        .unwrap()
+        .then((data) => setLot(data))
+        .catch((err) => console.error("Failed to fetch lot:", err));
+    }
+  }, [dispatch, lotId]);
 
   // ==========================================
   // FETCH QUOTATIONS
@@ -116,7 +129,7 @@ export default function LotQuotationList() {
       <div className="flex items-center justify-between mt-2 mb-6">
         <div>
           <h1 className="font-serif text-2xl text-brand-dark">
-            Lot Quotations
+            {lot?.lotNumber || "Details"} Quotations
           </h1>
 
           <p className="text-sm text-gray-500">

@@ -11,6 +11,20 @@ export const fetchLots = createAsyncThunk(
   },
 );
 
+export const fetchLotById = createAsyncThunk(
+  "lots/fetchById",
+  async (lotId, { rejectWithValue }) => {
+    try {
+      const res = await api.get(`/lots/${lotId}`);
+      return res.data.data;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message || "Failed to fetch lot details",
+      );
+    }
+  },
+);
+
 export const createLot = createAsyncThunk(
   "lots/create",
   async (payload, { rejectWithValue }) => {
