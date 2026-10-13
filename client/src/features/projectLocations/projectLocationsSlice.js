@@ -44,12 +44,19 @@ export const createProjectLocation = createAsyncThunk(
   "projectLocations/create",
   async (payload, { rejectWithValue }) => {
     try {
+      console.log("Creating project location with payload:", payload);
       const res = await api.post("/project-locations", payload);
-
       return res.data.data;
     } catch (err) {
+      console.error("Create project location error:", {
+        status: err.response?.status,
+        response: err.response?.data,
+        payload,
+      });
       return rejectWithValue(
-        err.response?.data?.message || "Failed to create project location",
+        err.response?.data?.message ||
+          err.response?.data?.error ||
+          "Failed to create project location",
       );
     }
   },

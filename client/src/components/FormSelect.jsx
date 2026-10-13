@@ -4,6 +4,7 @@ export default function FormSelect({
   value,
   onChange,
   options = [],
+  placeholder = "Select an option",
   required = false,
   disabled = false,
   error = "",
@@ -17,7 +18,6 @@ export default function FormSelect({
           className="mb-1 block text-sm font-medium text-gray-700"
         >
           {label}
-
           {required && <span className="ml-1 text-red-500">*</span>}
         </label>
       )}
@@ -39,6 +39,10 @@ export default function FormSelect({
             : "bg-white text-gray-700"
         }`}
       >
+        <option value="" disabled>
+          {placeholder}
+        </option>
+
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

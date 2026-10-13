@@ -10,7 +10,14 @@ import {
   updateProjectLocation,
 } from "../../features/projectLocations/projectLocationsSlice";
 
-const STATUS_OPTIONS = ["ACTIVE", "INACTIVE", "COMPLETED"].map((v) => ({
+const STATUS_OPTIONS = [
+  "OPEN",
+  "SOLD",
+  "RE_OPEN",
+  "HOLD",
+  "RESERVED",
+  "RFO",
+].map((v) => ({
   value: v,
   label: v,
 }));
@@ -192,7 +199,6 @@ export default function ProjectLocationFormModal({
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* PROJECT NAME + LOCATION */}
-
         <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-4">
           <FormInput
             label="Project name"
@@ -215,7 +221,6 @@ export default function ProjectLocationFormModal({
         </div>
 
         {/* TOTAL AREA + STATUS */}
-
         <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-4">
           <FormInput
             label="Total lot area (sqm)"
@@ -225,22 +230,19 @@ export default function ProjectLocationFormModal({
             name="totalLotAreaSqm"
             value={form.totalLotAreaSqm}
             onChange={handleChange}
-            placeholder="Enter total lot area"
+            placeholder="Enter total lot area in sqm"
             required
           />
-
           <FormSelect
             label="Status"
             name="status"
             value={form.status}
             onChange={handleChange}
             options={STATUS_OPTIONS}
-            placeholder={null}
           />
         </div>
 
         {/* DESCRIPTION */}
-
         <FormInput
           label="Description (optional)"
           name="description"
@@ -248,16 +250,12 @@ export default function ProjectLocationFormModal({
           onChange={handleChange}
           placeholder="Enter project description"
         />
-
         {/* INFORMATION */}
-
         <p className="text-xs text-gray-500">
           Cuts, Inc. Road and Available Cuts are counted automatically from this
           project's lots.
         </p>
-
         {/* BUTTONS */}
-
         <div className="flex gap-3 border-t pt-4">
           <button
             type="button"
