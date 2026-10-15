@@ -1,14 +1,13 @@
 import prisma from "../../config/db.js";
 import { summarizeLotCounts, emptyCounts } from "./lotCounts.js";
+import { LOCATIONS } from "./locations.js";
 
-// Prisma returns Decimal fields as Decimal.js instances — convert them so
-// the frontend always receives plain numbers.
+// Convert Prisma Decimal fields to plain JavaScript numbers.
 function toNumber(value) {
   return value === null || value === undefined ? value : Number(value);
 }
 
-// `counts` = { cuts, incRoad, availableCuts }, computed from the project's
-// lots (see lotCounts.js). These are never stored on the project row.
+// Computed lot counts are not stored on the project row.
 function shapeProjectLocation(project, counts = emptyCounts()) {
   return {
     id: project.id,
@@ -25,13 +24,15 @@ function shapeProjectLocation(project, counts = emptyCounts()) {
   };
 }
 
-// One query for ALL projects on the page (not one per project).
+// Get lot counts for all projects on the page.
 async function countsForProjects(projectIds) {
   if (projectIds.length === 0) return new Map();
 
   const rows = await prisma.lot.groupBy({
     by: ["projectLocationId", "status"],
-    where: { projectLocationId: { in: projectIds } },
+    where: {
+      projectLocationId: { in: projectIds },
+    },
     _count: { _all: true },
   });
 
@@ -51,8 +52,18 @@ async function listProjectLocations({
     ...(search
       ? {
           OR: [
-            { projectName: { contains: search, mode: "insensitive" } },
-            { location: { contains: search, mode: "insensitive" } },
+            {
+              projectName: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
+            {
+              location: {
+                contains: search,
+                mode: "insensitive",
+              },
+            },
           ],
         }
       : {}),
@@ -68,10 +79,14 @@ async function listProjectLocations({
     prisma.projectLocation.count({ where }),
   ]);
 
-  const countsById = await countsForProjects(items.map((p) => p.id));
+  const countsById = await countsForProjects(
+    items.map((project) => project.id),
+  );
 
   return {
-    items: items.map((p) => shapeProjectLocation(p, countsById.get(p.id))),
+    items: items.map((project) =>
+      shapeProjectLocation(project, countsById.get(project.id)),
+    ),
     total,
     page: Number(page),
     totalPages: Math.ceil(total / limit) || 1,
@@ -79,7 +94,9 @@ async function listProjectLocations({
 }
 
 async function getProjectLocationById(id) {
-  const project = await prisma.projectLocation.findUnique({ where: { id } });
+  const project = await prisma.projectLocation.findUnique({
+    where: { id },
+  });
 
   if (!project) {
     const err = new Error("Project location not found");
@@ -88,13 +105,25 @@ async function getProjectLocationById(id) {
   }
 
   const countsById = await countsForProjects([id]);
+
   return shapeProjectLocation(project, countsById.get(id));
 }
 
 async function createProjectLocation(data) {
+  // Validate location for new projects.
+  if (!LOCATIONS.includes(data.location)) {
+    const err = new Error(`Location must be one of: ${LOCATIONS.join(", ")}`);
+    err.status = 400;
+    throw err;
+  }
+
   const existing = await prisma.projectLocation.findFirst({
-    where: { projectName: data.projectName, location: data.location },
+    where: {
+      projectName: data.projectName,
+      location: data.location,
+    },
   });
+
   if (existing) {
     const err = new Error(
       "A project with this name already exists at this location",
@@ -117,12 +146,26 @@ async function createProjectLocation(data) {
 }
 
 async function updateProjectLocation(id, data) {
+  // Fetch the existing project first.
   const existingProject = await prisma.projectLocation.findUnique({
     where: { id },
   });
+
   if (!existingProject) {
     const err = new Error("Project location not found");
     err.status = 404;
+    throw err;
+  }
+
+  // Allow legacy locations to remain unchanged, but do not allow
+  // changing a project to a location outside the approved list.
+  if (
+    data.location &&
+    data.location !== existingProject.location &&
+    !LOCATIONS.includes(data.location)
+  ) {
+    const err = new Error(`Location must be one of: ${LOCATIONS.join(", ")}`);
+    err.status = 400;
     throw err;
   }
 
@@ -143,20 +186,20 @@ async function updateProjectLocation(id, data) {
   return getProjectLocationById(id);
 }
 
-// The schema defines onDelete: Cascade from Lot -> ProjectLocation (and
-// LotQuotation -> Lot), so deleting a project also deletes its lots and
-// their quotations. The list page warns with the cut count first.
 async function deleteProjectLocation(id) {
   const existingProject = await prisma.projectLocation.findUnique({
     where: { id },
   });
+
   if (!existingProject) {
     const err = new Error("Project location not found");
     err.status = 404;
     throw err;
   }
 
-  await prisma.projectLocation.delete({ where: { id } });
+  await prisma.projectLocation.delete({
+    where: { id },
+  });
 }
 
 export {

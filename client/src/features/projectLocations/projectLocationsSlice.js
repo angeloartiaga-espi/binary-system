@@ -8,25 +8,13 @@ import api from "../../app/axios";
 */
 export const fetchProjectLocations = createAsyncThunk(
   "projectLocations/fetchAll",
-  async ({ page = 1, search = "", status = "" } = {}, { rejectWithValue }) => {
-    try {
-      const res = await api.get("/project-locations", {
-        params: {
-          page,
-          search,
-          status,
-        },
-      });
-
-      return res.data.data;
-    } catch (err) {
-      return rejectWithValue(
-        err.response?.data?.message || "Failed to fetch project locations",
-      );
-    }
+  async ({ page = 1, search = "", status = "", location = "" } = {}) => {
+    const res = await api.get("/project-locations", {
+      params: { page, search, status, location },
+    });
+    return res.data.data; // { items, total, page, totalPages }
   },
 );
-
 export const fetchProjectLocationById = createAsyncThunk(
   "projectLocations/fetchOne",
   async (id) => {
