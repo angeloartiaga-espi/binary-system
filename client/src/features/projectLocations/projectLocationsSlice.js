@@ -3,7 +3,7 @@ import api from "../../app/axios";
 
 /*
 |--------------------------------------------------------------------------
-| FETCH PROJECT LOCATIONS
+| FETCH PROJECT LOCATIONS (PAGINATED TABLE)
 |--------------------------------------------------------------------------
 */
 export const fetchProjectLocations = createAsyncThunk(
@@ -12,9 +12,77 @@ export const fetchProjectLocations = createAsyncThunk(
     const res = await api.get("/project-locations", {
       params: { page, search, status, location },
     });
+
     return res.data.data; // { items, total, page, totalPages }
   },
 );
+
+/*
+|--------------------------------------------------------------------------
+| FETCH ALL PROJECT LOCATIONS FOR PDF
+|--------------------------------------------------------------------------
+| Fetches every API page using the same filters.
+| Does NOT overwrite the table's Redux list or pagination.
+|--------------------------------------------------------------------------
+*/
+export const fetchAllProjectLocationsForPdf = createAsyncThunk(
+  "projectLocations/fetchAllForPdf",
+  async (
+    { search = "", status = "", location = "" } = {},
+    { rejectWithValue },
+  ) => {
+    try {
+      // Fetch the first page to determine how many pages exist.
+      const firstResponse = await api.get("/project-locations", {
+        params: {
+          page: 1,
+          search,
+          status,
+          location,
+        },
+      });
+
+      const firstPage = firstResponse.data.data;
+
+      if (!firstPage) {
+        throw new Error("The server returned an empty response.");
+      }
+
+      const allProjects = [...(firstPage.items || [])];
+      const totalPages = Math.max(1, Number(firstPage.totalPages) || 1);
+
+      // Fetch every remaining page.
+      for (let page = 2; page <= totalPages; page += 1) {
+        const response = await api.get("/project-locations", {
+          params: {
+            page,
+            search,
+            status,
+            location,
+          },
+        });
+
+        const pageData = response.data.data;
+
+        allProjects.push(...(pageData?.items || []));
+      }
+
+      return allProjects;
+    } catch (err) {
+      return rejectWithValue(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to fetch all project locations for PDF.",
+      );
+    }
+  },
+);
+
+/*
+|--------------------------------------------------------------------------
+| FETCH PROJECT LOCATION BY ID
+|--------------------------------------------------------------------------
+*/
 export const fetchProjectLocationById = createAsyncThunk(
   "projectLocations/fetchOne",
   async (id) => {
@@ -33,7 +101,9 @@ export const createProjectLocation = createAsyncThunk(
   async (payload, { rejectWithValue }) => {
     try {
       console.log("Creating project location with payload:", payload);
+
       const res = await api.post("/project-locations", payload);
+
       return res.data.data;
     } catch (err) {
       console.error("Create project location error:", {
@@ -41,6 +111,7 @@ export const createProjectLocation = createAsyncThunk(
         response: err.response?.data,
         payload,
       });
+
       return rejectWithValue(
         err.response?.data?.message ||
           err.response?.data?.error ||
@@ -112,17 +183,14 @@ const initialState = {
 */
 const projectLocationsSlice = createSlice({
   name: "projectLocations",
-
   initialState,
-
   reducers: {},
-
   extraReducers: (builder) => {
     builder
 
       /*
       |--------------------------------------------------------------------------
-      | FETCH
+      | FETCH PAGINATED TABLE
       |--------------------------------------------------------------------------
       */
       .addCase(fetchProjectLocations.pending, (state) => {
@@ -146,6 +214,23 @@ const projectLocationsSlice = createSlice({
         state.error = action.payload || "Failed to fetch project locations";
       })
 
+      /*
+      |--------------------------------------------------------------------------
+      | FETCH ALL FOR PDF
+      |--------------------------------------------------------------------------
+      | Intentionally does not modify state.list or table pagination.
+      | The complete array is returned by the thunk's fulfilled action.
+      |--------------------------------------------------------------------------
+      */
+      .addCase(fetchAllProjectLocationsForPdf.rejected, (state, action) => {
+        state.error = action.payload || "Failed to fetch projects for PDF.";
+      })
+
+      /*
+      |--------------------------------------------------------------------------
+      | FETCH ONE
+      |--------------------------------------------------------------------------
+      */
       .addCase(fetchProjectLocationById.fulfilled, (state, action) => {
         state.selectedProject = action.payload;
       })
