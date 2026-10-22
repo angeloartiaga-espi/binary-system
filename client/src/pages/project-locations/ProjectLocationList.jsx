@@ -346,52 +346,60 @@ export default function ProjectLocationsList() {
             )}
 
             {status !== "loading" &&
-              visibleProjects.map((project) => (
-                <tr key={project.id} className="border-b last:border-0">
-                  <td className="p-3 font-medium">{project.projectName}</td>
+              [...visibleProjects]
+                .sort(
+                  (a, b) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime(),
+                )
+                .map((project) => (
+                  <tr key={project.id} className="border-b last:border-0">
+                    <td className="p-3 font-medium">{project.projectName}</td>
 
-                  <td className="p-3">{project.location}</td>
+                    <td className="p-3">{project.location}</td>
 
-                  <td className="p-3">{numberFmt(project.totalLotAreaSqm)}</td>
+                    <td className="p-3">
+                      {numberFmt(project.totalLotAreaSqm)}
+                    </td>
 
-                  <td className="p-3 text-center font-medium">
-                    {project.incRoad ?? 0}
-                  </td>
+                    <td className="p-3 text-center font-medium">
+                      {project.incRoad ?? 0}
+                    </td>
 
-                  <td className="p-3 text-center text-green-700 font-medium">
-                    {project.availableCuts ?? 0}
-                  </td>
+                    <td className="p-3 text-center text-green-700 font-medium">
+                      {project.availableCuts ?? 0}
+                    </td>
 
-                  <td className="p-3">
-                    <ProjectStatusBadge status={project.status} />
-                  </td>
+                    <td className="p-3">
+                      <ProjectStatusBadge status={project.status} />
+                    </td>
 
-                  <td className="p-3 space-x-3 whitespace-nowrap">
-                    <Link
-                      to={`/properties/${project.id}/lots`}
-                      className="text-brand-dark font-medium"
-                    >
-                      View
-                    </Link>
+                    <td className="p-3 space-x-3 whitespace-nowrap">
+                      <Link
+                        to={`/properties/${project.id}/lots`}
+                        className="text-brand-dark font-medium"
+                      >
+                        View
+                      </Link>
 
-                    <button
-                      type="button"
-                      onClick={() => setFormModalProject(project)}
-                      className="text-brand-dark font-medium"
-                    >
-                      Edit
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormModalProject(project)}
+                        className="text-brand-dark font-medium"
+                      >
+                        Edit
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setProjectToDelete(project)}
-                      className="text-red-600 font-medium"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                      <button
+                        type="button"
+                        onClick={() => setProjectToDelete(project)}
+                        className="text-red-600 font-medium"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
           </tbody>
         </table>
       </div>

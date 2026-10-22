@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, Link } from "react-router-dom";
 
+import FaceCapture from "../components/FaceCapture";
 import SplitAuthLayout from "../components/SplitAuthLayout";
 import FormInput from "../components/FormInput";
 import PrivacyNotice from "../components/PrivacyNotice";
@@ -50,46 +51,19 @@ export default function Register() {
   });
 
   const [idImage, setIdImage] = useState(null);
+
+  // Captured face photo
+  const [faceImage, setFaceImage] = useState(null);
+  const [faceError, setFaceError] = useState(null);
+
   const [agreed, setAgreed] = useState(false);
 
+  // Referral state
   const [referrer, setReferrer] = useState(null);
   const [referrerLoading, setReferrerLoading] = useState(false);
   const [referrerError, setReferrerError] = useState("");
 
-  useEffect(() => {
-    const code = form.referrerCode.trim();
-
-    if (!code) {
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      try {
-        setReferrerLoading(true);
-        setReferrerError("");
-        setReferrer(null);
-
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/auth/referrer/${encodeURIComponent(code)}`,
-        );
-
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.message || "Referral code not found");
-        }
-
-        setReferrer(result.data);
-      } catch (error) {
-        setReferrerError(error.message);
-      } finally {
-        setReferrerLoading(false);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [form.referrerCode]);
-
+  // Update form fields
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -99,13 +73,93 @@ export default function Register() {
     }));
   };
 
+  // Validate referral code without directly updating component state.
+  const validateReferrer = useCallback(async (code, signal) => {
+    if (!code) {
+      return {
+        referrer: null,
+        error: "",
+      };
+    }
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL;
+
+      const response = await fetch(
+        `${apiUrl}/auth/referrer/${encodeURIComponent(code)}`,
+        { signal },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Referral code not found");
+      }
+
+      return {
+        referrer: result.data,
+        error: "",
+      };
+    } catch (error) {
+      if (error.name === "AbortError") {
+        throw error;
+      }
+
+      return {
+        referrer: null,
+        error: error.message || "Unable to validate referral code",
+      };
+    }
+  }, []);
+
+  // Referral validation effect
+  useEffect(() => {
+    const code = form.referrerCode.trim();
+
+    if (!code) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      try {
+        setReferrerLoading(true);
+        setReferrerError("");
+        setReferrer(null);
+
+        const result = await validateReferrer(code, controller.signal);
+
+        if (controller.signal.aborted) return;
+
+        setReferrer(result.referrer);
+        setReferrerError(result.error);
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          setReferrerError(error.message || "Unable to validate referral code");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setReferrerLoading(false);
+        }
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [form.referrerCode, validateReferrer]);
+
   // Calculate age from birthdate.
   // Age is NOT stored in the database.
   const calculateAge = (birthdate) => {
     if (!birthdate) return "";
 
     const today = new Date();
-    const birthDate = new Date(birthdate);
+    const birthDate = new Date(`${birthdate}T00:00:00`);
+
+    if (Number.isNaN(birthDate.getTime())) return "";
 
     let age = today.getFullYear() - birthDate.getFullYear();
 
@@ -123,10 +177,25 @@ export default function Register() {
 
   const age = calculateAge(form.birthdate);
 
+  // Submit registration form
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!agreed) return;
+
+    // A face photo is required before registration.
+    if (!faceImage) {
+      setFaceError("Please capture your photo before creating your account.");
+      return;
+    }
+
+    // Validate passwords
+    if (form.password !== form.confirmPassword) {
+      alert("Passwords do not match.");
+      return;
+    }
+
+    setFaceError(null);
 
     const data = new FormData();
 
@@ -136,9 +205,13 @@ export default function Register() {
 
     data.append("privacyConsent", "true");
 
+    // Existing ID image upload
     if (idImage) {
       data.append("idImage", idImage);
     }
+
+    // Face photo upload
+    data.append("faceImage", faceImage);
 
     const result = await dispatch(registerUser(data));
 
@@ -158,10 +231,7 @@ export default function Register() {
       {error && <p className="text-red-600 mb-4">{error}</p>}
 
       <form onSubmit={handleSubmit}>
-        {/* ==========================================
-            BASIC INFORMATION
-        ========================================== */}
-
+        {/* BASIC INFORMATION */}
         <h3 className="font-semibold text-lg mb-3">Basic Information</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -189,10 +259,7 @@ export default function Register() {
           />
         </div>
 
-        {/* ==========================================
-            CONTACT INFORMATION
-        ========================================== */}
-
+        {/* CONTACT INFORMATION */}
         <h3 className="font-semibold text-lg mt-6 mb-3">Contact Information</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -220,10 +287,7 @@ export default function Register() {
           required
         />
 
-        {/* ==========================================
-            ADDRESS
-        ========================================== */}
-
+        {/* ADDRESS */}
         <h3 className="font-semibold text-lg mt-6 mb-3">Address</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -242,10 +306,7 @@ export default function Register() {
           />
         </div>
 
-        {/* ==========================================
-            PERSONAL INFORMATION
-        ========================================== */}
-
+        {/* PERSONAL INFORMATION */}
         <h3 className="font-semibold text-lg mt-6 mb-3">
           Personal Information
         </h3>
@@ -309,10 +370,7 @@ export default function Register() {
           </div>
         </div>
 
-        {/* ==========================================
-            TAX & SPOUSE INFORMATION
-        ========================================== */}
-
+        {/* ADDITIONAL INFORMATION */}
         <h3 className="font-semibold text-lg mt-6 mb-3">
           Additional Information
         </h3>
@@ -331,10 +389,7 @@ export default function Register() {
           onChange={handleChange}
         />
 
-        {/* ==========================================
-            REFERRAL
-        ========================================== */}
-
+        {/* REFERRAL */}
         <h3 className="font-semibold text-lg mt-6 mb-3">Referral</h3>
 
         <div className="mb-4">
@@ -363,10 +418,7 @@ export default function Register() {
           )}
         </div>
 
-        {/* ==========================================
-            ACCOUNT SECURITY
-        ========================================== */}
-
+        {/* ACCOUNT SECURITY */}
         <h3 className="font-semibold text-lg mt-6 mb-3">Account Security</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -389,10 +441,7 @@ export default function Register() {
           />
         </div>
 
-        {/* ==========================================
-            ID UPLOAD
-        ========================================== */}
-
+        {/* ID UPLOAD */}
         <div className="mb-4 mt-6">
           <label className="block text-sm font-medium mb-1">
             Upload ID image
@@ -401,7 +450,7 @@ export default function Register() {
           <input
             type="file"
             accept=".jpg,.jpeg,.png,.pdf"
-            onChange={(e) => setIdImage(e.target.files[0] || null)}
+            onChange={(e) => setIdImage(e.target.files?.[0] || null)}
           />
 
           <p className="text-xs text-gray-500 mt-1">
@@ -409,10 +458,34 @@ export default function Register() {
           </p>
         </div>
 
-        {/* ==========================================
-            PRIVACY NOTICE
-        ========================================== */}
+        {/* FACE CAPTURE */}
+        <section className="mb-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-dark/70 border-b border-brand-dark/10 pb-1 mb-4 mt-4">
+            Face photo
+          </h3>
 
+          <p className="mb-3 text-sm text-gray-600">
+            Take a clear photo of your face with your camera. This is separate
+            from your ID upload.
+          </p>
+
+          <FaceCapture
+            disabled={status === "loading"}
+            onChange={(file) => {
+              setFaceImage(file);
+
+              if (file) {
+                setFaceError(null);
+              }
+            }}
+          />
+
+          {faceError && (
+            <p className="mt-2 text-sm text-red-600">{faceError}</p>
+          )}
+        </section>
+
+        {/* PRIVACY NOTICE */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-1">
             Privacy Notice
@@ -432,13 +505,10 @@ export default function Register() {
           <span>I agree to the Terms and Privacy Policy</span>
         </label>
 
-        {/* ==========================================
-            SUBMIT
-        ========================================== */}
-
+        {/* SUBMIT */}
         <button
           type="submit"
-          disabled={!agreed || status === "loading"}
+          disabled={!agreed || !faceImage || status === "loading"}
           className="w-full bg-linear-to-r from-brand-gold to-yellow-600 text-brand-dark font-semibold py-2 rounded-md disabled:opacity-50"
         >
           {status === "loading" ? "Creating account..." : "Create account"}

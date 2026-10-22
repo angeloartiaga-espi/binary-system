@@ -79,6 +79,7 @@ model User {
 
   // Identification
   idImage String?
+  faceImage String?   // camera-captured registration photo (Cloudinary URL)
 
   // Referral Information
   referralCode String  @unique

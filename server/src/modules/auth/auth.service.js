@@ -4,7 +4,7 @@ import { generateReferralCode } from "../../utils/referralCode.js";
 import { signToken, verifyToken } from "../../utils/jwt.js";
 import { sendVerificationEmail } from "../../utils/email.js";
 
-const PRIVACY_NOTICE_VERSION = "v1.0-2026";
+const PRIVACY_NOTICE_VERSION = "v1.1-2026";
 
 async function registerUser(
   {
@@ -26,6 +26,7 @@ async function registerUser(
     referrerCode,
   },
   idImageUrl,
+  faceImageUrl,
 ) {
   const existing = await prisma.user.findUnique({
     where: { email },
@@ -84,6 +85,7 @@ async function registerUser(
         middleName,
         lastName,
         email,
+        password: hashedPassword,
 
         // Contact Information
         phone,
@@ -105,8 +107,9 @@ async function registerUser(
         // Spouse Information
         spouseName,
 
-        // Identification
+        // Identification Images
         idImage: idImageUrl,
+        faceImage: faceImageUrl,
 
         // Referral
         referralCode,
@@ -135,23 +138,28 @@ async function registerUser(
     return created;
   });
 
-  // Create a short-lived JWT specifically for email verification.
-  const verificationToken = signToken(
-    {
-      id: user.id,
-      purpose: "email-verification",
-    },
-    "24h",
-  );
+  // Prepare and send the verification email.
+  // Email preparation errors must not make registration fail.
+  try {
+    const verificationToken = signToken(
+      {
+        id: user.id,
+        purpose: "email-verification",
+      },
+      "24h",
+    );
 
-  const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
 
-  const verifyUrl = `${clientUrl}/verify-email/${verificationToken}`;
+    const verifyUrl = `${clientUrl}/verify-email/${verificationToken}`;
 
-  // Send verification email without blocking registration.
-  sendVerificationEmail(user.email, user.firstName, verifyUrl).catch((err) =>
-    console.error("Failed to send verification email:", err.message),
-  );
+    // Send verification email without blocking registration.
+    sendVerificationEmail(user.email, user.firstName, verifyUrl).catch((err) =>
+      console.error("Failed to send verification email:", err.message),
+    );
+  } catch (err) {
+    console.error("Could not prepare the verification email:", err.message);
+  }
 
   const { password: _pw, ...safeUser } = user;
 

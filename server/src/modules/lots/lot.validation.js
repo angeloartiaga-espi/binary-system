@@ -1,6 +1,6 @@
 import { body, query } from "express-validator";
 
-const STATUSES = ["OPEN", "SOLD", "RE_OPEN", "HOLD", "RESERVED"];
+const STATUSES = ["OPEN", "SOLD", "RE_OPEN", "HOLD", "RESERVED", "RFO"];
 
 const createValidation = [
   body("projectLocationId")
